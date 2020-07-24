@@ -1411,7 +1411,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ed67b81fb4b64d498a58bbb1c32d63d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instanceCount: 50000
+  instanceCount: 20000
   instanceMaterial: {fileID: 2100000, guid: 2a0ca5d9e755e74448eaac7a643303db, type: 2}
 --- !u!4 &1709084318
 Transform:
