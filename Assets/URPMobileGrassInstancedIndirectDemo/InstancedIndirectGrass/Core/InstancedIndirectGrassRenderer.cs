@@ -20,7 +20,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         UpdateBuffers();
 
         // Render     
-        Graphics.DrawMeshInstancedIndirect(GetGrassMesh(), 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(GetGrassMesh(), 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(1000.0f, 1000.0f, 1000.0f)), argsBuffer);
     }
     void OnDisable()
     {
@@ -46,17 +46,15 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         {
             //if not exist, return a 5 vertices hardcode grass mesh
             cachedGrassMesh = new Mesh();
-            Vector3[] verts = new Vector3[5];
+            Vector3[] verts = new Vector3[3];
 
             //first grass
-            verts[0] = new Vector3(-0.15f, 0);
-            verts[1] = new Vector3(+0.15f, 0);
-            verts[2] = new Vector3(-0.1f, 0.5f);
-            verts[3] = new Vector3(+0.1f, 0.5f);
-            verts[4] = new Vector3(-0.0f, 1);
+            verts[0] = new Vector3(-0.25f, 0);
+            verts[1] = new Vector3(+0.25f, 0);
+            verts[2] = new Vector3(-0.0f, 1);
 
             cachedGrassMesh.SetVertices(verts);
-            int[] trinagles = new int[9] { 0, 1, 2, 1, 3, 2, 3, 4, 2 };
+            int[] trinagles = new int[3] { 0, 1, 2,};
             cachedGrassMesh.SetTriangles(trinagles, 0);
         }
 
@@ -71,8 +69,12 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             cachedLocalScale == transform.localScale &&
             argsBuffer != null &&
             positionBuffer != null)
-            return;
-
+            {
+#if UNITY_EDITOR
+                if (Application.isPlaying)
+#endif
+                    return;
+            }
         //=============================================
         if (argsBuffer != null)
             argsBuffer.Release();
