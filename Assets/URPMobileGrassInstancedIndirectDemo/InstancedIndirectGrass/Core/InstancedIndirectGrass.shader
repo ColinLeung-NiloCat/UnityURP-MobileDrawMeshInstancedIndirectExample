@@ -112,16 +112,19 @@
                 /////////////////////////////////////////////////////////////////////
                 //lighting & color
                 /////////////////////////////////////////////////////////////////////
+
+                //lighting data
                 Light mainLight;
 #if _MAIN_LIGHT_SHADOWS
                 mainLight = GetMainLight(TransformWorldToShadowCoord(positionWS));
 #else
                 mainLight = GetMainLight();
 #endif
-                half3 randomNAdd = sin(instanceID) * cameraTransformRightWS * 0.1;
-                half3 N = normalize(half3(0,1,0) + randomNAdd);//random normal
+                half3 randomAddToN = sin(instanceID) * cameraTransformRightWS * 0.15;
+                half3 N = normalize(half3(0,1,0) + randomAddToN);//random normal per grass
                 half3 V = viewWS / lengthViewWS;
                 half3 H = normalize(mainLight.direction + V);
+
                 //direct diffuse 
                 half3 lighting = mainLight.color;
                 lighting *= saturate(dot(N, mainLight.direction) * 0.5 + 0.5);
@@ -141,7 +144,7 @@
                 specular *= specular;
 
 
-                OUT.color += specular * mainLight.color * mainLight.shadowAttenuation * 0.125 * (positionOS.y * 0.5 + 0.5); 
+                OUT.color += specular * mainLight.color * mainLight.shadowAttenuation * 0.05 * (positionOS.y * 0.5 + 0.5); 
 
                 //fog
                 float fogFactor = ComputeFogFactor(OUT.positionCS.z);
