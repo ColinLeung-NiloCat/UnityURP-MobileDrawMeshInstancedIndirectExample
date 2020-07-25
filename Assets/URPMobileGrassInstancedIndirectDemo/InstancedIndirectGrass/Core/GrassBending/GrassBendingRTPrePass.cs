@@ -4,9 +4,13 @@ using UnityEngine.Rendering.Universal;
 
 public class GrassBendingRTPrePass : ScriptableRendererFeature
 {
+
+
     class CustomRenderPass : ScriptableRenderPass
     {
-        int pid = Shader.PropertyToID("_GrassBendingRT");
+        static readonly int _GrassBendingRT_pid = Shader.PropertyToID("_GrassBendingRT");
+        static readonly RenderTargetIdentifier _GrassBendingRT_rti = new RenderTargetIdentifier(_GrassBendingRT_pid);
+        ShaderTagId GrassBending_stid = new ShaderTagId("GrassBending");
 
         // This method is called before executing the render pass.
         // It can be used to configure render targets and their clear state. Also to create temporary render target textures.
@@ -15,8 +19,8 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
         // The render pipeline will ensure target setup and clearing happens in an performance manner.
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            cmd.GetTemporaryRT(pid, new RenderTextureDescriptor(64, 64, RenderTextureFormat.R8,0));
-            ConfigureTarget(new RenderTargetIdentifier(pid));
+            cmd.GetTemporaryRT(_GrassBendingRT_pid, new RenderTextureDescriptor(64, 64, RenderTextureFormat.R8,0));//64*64 is big enough for this demo
+            ConfigureTarget(_GrassBendingRT_rti);
             ConfigureClear(ClearFlag.All, Color.white);
         }
 
@@ -26,36 +30,43 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
         // You don't have to call ScriptableRenderContext.submit, the render pipeline will call it at specific points in the pipeline.
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            GameObject go = GameObject.Find("Camera-GrassBend");
-            if (!go) return;
+            if (!InstancedIndirectGrassRenderer.instance)
+            {
+                Debug.LogError("InstancedIndirectGrassRenderer not found, abort GrassBendingRTPrePass");
+                return;
+            }
 
             CommandBuffer cmd = CommandBufferPool.Get("GrassBendingRT");
-            
-            //set camera matrix
+
+            //override view & Projection matrix
             Matrix4x4 projectionMatrix = Matrix4x4.Ortho(-50, 50, -50, 50, 1, 100);
-            ;
-            Matrix4x4 viewMatrix = go.GetComponent<Camera>().worldToCameraMatrix;//Matrix4x4.Translate(new Vector3(0,10,0)) * Matrix4x4.LookAt(new Vector3(0,1,0),new Vector3(0,0,0),new Vector3(1,0,0));
+
+            //make a view matrix that is the same as a new camera above grass 50 units and looking to grass(bird view)
+            Matrix4x4 viewMatrix = Matrix4x4.TRS(InstancedIndirectGrassRenderer.instance.transform.position + new Vector3(0, 50, 0),Quaternion.LookRotation(-Vector3.up), new Vector3(1,1,-1)).inverse;
+
             cmd.SetViewProjectionMatrices(viewMatrix, projectionMatrix);
             context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
             
-
-            //draw
-            var drawSetting = CreateDrawingSettings(new ShaderTagId("GrassBending"), ref renderingData, SortingCriteria.CommonTransparent);
+            //draw all trail renderer using SRP batching
+            var drawSetting = CreateDrawingSettings(GrassBending_stid, ref renderingData, SortingCriteria.CommonTransparent);
             var filterSetting = new FilteringSettings(RenderQueueRange.all);
             context.DrawRenderers(renderingData.cullResults, ref drawSetting, ref filterSetting);
 
             //restore camera matrix
+            cmd.Clear();
             cmd.SetViewProjectionMatrices(renderingData.cameraData.camera.worldToCameraMatrix, renderingData.cameraData.camera.projectionMatrix);
+
+            //set global RT
+            cmd.SetGlobalTexture(_GrassBendingRT_pid, new RenderTargetIdentifier(_GrassBendingRT_pid));
+
             context.ExecuteCommandBuffer(cmd);
-            cmd.SetGlobalTexture(pid, new RenderTargetIdentifier(pid));
             CommandBufferPool.Release(cmd);
         }
 
         /// Cleanup any allocated resources that were created during the execution of this render pass.
         public override void FrameCleanup(CommandBuffer cmd)
         {
-            cmd.ReleaseTemporaryRT(pid);
+            cmd.ReleaseTemporaryRT(_GrassBendingRT_pid);
         }
     }
 
@@ -66,7 +77,7 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
         m_ScriptablePass = new CustomRenderPass();
 
         // Configures where the render pass should be injected.
-        m_ScriptablePass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
+        m_ScriptablePass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses; //don't do RT switch when rendering _CameraColorTexture, so use AfterRenderingPrePasses
     }
 
     // Here you can inject one or multiple render passes in the renderer.

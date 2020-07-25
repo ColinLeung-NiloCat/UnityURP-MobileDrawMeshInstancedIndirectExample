@@ -9,6 +9,10 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     public int instanceCount = 20000;
     public Material instanceMaterial;
 
+    //global ref to this script
+    [HideInInspector]
+    public static InstancedIndirectGrassRenderer instance;
+
     private int cachedInstanceCount = -1;
     private Vector3 cachedPivotPos = Vector3.negativeInfinity;
     private Vector3 cachedLocalScale = Vector3.negativeInfinity;
@@ -19,6 +23,8 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     void LateUpdate()
     {
+        instance = this; // assign global ref using this script
+
         // Update _TransformBuffer in grass shader if needed
         UpdateBuffersIfNeeded();
 
