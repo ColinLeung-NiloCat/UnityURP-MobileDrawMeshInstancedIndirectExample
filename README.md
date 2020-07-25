@@ -14,7 +14,7 @@ download .apk: __________
  
  Why create this project?
  -------------
- To test DrawMeshInstancedIndirect API on mobile devices. And found that everything works very well even on weak GPU like adreno506.  
+ To demonstrate DrawMeshInstancedIndirect API on mobile devices. Everything works very well even on weak GPU like adreno506.  
 - can draw 10,000 instance on almost any mobile GPU(e.g. adreno506) within 4ms, performance affected mainly by grass's vertex shader
 - can draw 100,000 instances on 2018/2019 flagship mobile GPU (adreno630) within 4ms, performance affected mainly by grass's vertex shader
  
@@ -28,12 +28,12 @@ download .apk: __________
  
  Note
  -------------
- This is a simplified example project, just to test DrawMeshInstancedIndirect API on mobile.  
+ This is a simplified example project, just to demonstrate DrawMeshInstancedIndirect API on mobile.  
  Does not contain any compute GPU culling and Acceleration Algorithms. It is as simple as possible, just 1 DrawMeshInstancedIndirect call.
  
  Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader lighting & animation, you can have a look at the InstancedIndirectGrass.shader if you are interested.  
  
- This project also contains an offscreen RT(R8) to render a top down grass bending area using trail renderer, it is very simple but the result is good enough for this demo.
+ This project also contains a RendererFeature(GrassBendingRTPrePass) to render an offscreen RT(R8) recording top down view grass bending area using trail renderer, it is very simple but the result is good enough for this demo.
  
 Asset that use DrawMeshInstancedIndirect?
 -------------------
