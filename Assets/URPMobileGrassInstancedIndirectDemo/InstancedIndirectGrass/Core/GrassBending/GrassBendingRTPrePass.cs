@@ -4,8 +4,6 @@ using UnityEngine.Rendering.Universal;
 
 public class GrassBendingRTPrePass : ScriptableRendererFeature
 {
-
-
     class CustomRenderPass : ScriptableRenderPass
     {
         static readonly int _GrassBendingRT_pid = Shader.PropertyToID("_GrassBendingRT");
@@ -32,18 +30,21 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
         {
             if (!InstancedIndirectGrassRenderer.instance)
             {
-                Debug.LogError("InstancedIndirectGrassRenderer not found, abort GrassBendingRTPrePass");
+                Debug.LogError("InstancedIndirectGrassRenderer not found, abort GrassBendingRTPrePass's Execute");
                 return;
             }
 
             CommandBuffer cmd = CommandBufferPool.Get("GrassBendingRT");
 
+            //make a new view matrix that is the same as an imaginary camera above grass center 1 units and looking at grass(bird view)
+            //scale.z is -1 because view space will look into -Z while world space will look into +Z
+            //camera transform's local to world's inverse means camera's world to view = world to local
+            Matrix4x4 viewMatrix = Matrix4x4.TRS(InstancedIndirectGrassRenderer.instance.transform.position + new Vector3(0, 1, 0),Quaternion.LookRotation(-Vector3.up), new Vector3(1,1,-1)).inverse;
+
+            //ortho camera with 1:1 aspect, size = 50
+            Matrix4x4 projectionMatrix = Matrix4x4.Ortho(-50, 50, -50, 50, 0.5f, 1.5f);
+
             //override view & Projection matrix
-            Matrix4x4 projectionMatrix = Matrix4x4.Ortho(-50, 50, -50, 50, 1, 100);
-
-            //make a view matrix that is the same as a new camera above grass 50 units and looking to grass(bird view)
-            Matrix4x4 viewMatrix = Matrix4x4.TRS(InstancedIndirectGrassRenderer.instance.transform.position + new Vector3(0, 50, 0),Quaternion.LookRotation(-Vector3.up), new Vector3(1,1,-1)).inverse;
-
             cmd.SetViewProjectionMatrices(viewMatrix, projectionMatrix);
             context.ExecuteCommandBuffer(cmd);
             
