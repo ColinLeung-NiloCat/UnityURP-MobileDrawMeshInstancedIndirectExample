@@ -29,7 +29,7 @@
 
         //make SRP batcher happy
         [HideInInspector]_PivotPosWS("_PivotPosWS", Vector) = (0,0,0,0)
-        [HideInInspector]_BoundSize("_BoundSize", Float) = 1
+        [HideInInspector]_BoundSize("_BoundSize", Vector) = (1,1,0)
     }
 
     SubShader
@@ -82,7 +82,7 @@
 
             CBUFFER_START(UnityPerMaterial)
                 float3 _PivotPosWS;
-                float _BoundSize;
+                float2 _BoundSize;
 
                 float _GrassWidth;
                 float _GrassHeight;

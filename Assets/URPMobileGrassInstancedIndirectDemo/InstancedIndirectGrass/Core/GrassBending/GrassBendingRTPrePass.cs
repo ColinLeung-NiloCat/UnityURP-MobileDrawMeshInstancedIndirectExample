@@ -42,7 +42,9 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
             Matrix4x4 viewMatrix = Matrix4x4.TRS(InstancedIndirectGrassRenderer.instance.transform.position + new Vector3(0, 1, 0),Quaternion.LookRotation(-Vector3.up), new Vector3(1,1,-1)).inverse;
 
             //ortho camera with 1:1 aspect, size = 50
-            Matrix4x4 projectionMatrix = Matrix4x4.Ortho(-50, 50, -50, 50, 0.5f, 1.5f);
+            float sizeX = InstancedIndirectGrassRenderer.instance.transform.localScale.x;
+            float sizeZ = InstancedIndirectGrassRenderer.instance.transform.localScale.z;
+            Matrix4x4 projectionMatrix = Matrix4x4.Ortho(-sizeX,sizeX, -sizeZ, sizeZ, 0.5f, 1.5f);
 
             //override view & Projection matrix
             cmd.SetViewProjectionMatrices(viewMatrix, projectionMatrix);

@@ -29,7 +29,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         UpdateBuffersIfNeeded();
 
         // Render     
-        Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(1000.0f, 1000.0f, 1000.0f)), argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, new Bounds(transform.position, transform.localScale), argsBuffer);
     }
     void OnDisable()
     {
@@ -109,7 +109,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         positionBuffer.SetData(positions);
         instanceMaterial.SetBuffer("_TransformBuffer", positionBuffer);
         instanceMaterial.SetVector("_PivotPosWS", transform.position);
-        instanceMaterial.SetFloat("_BoundSize", transform.localScale.x);
+        instanceMaterial.SetVector("_BoundSize", new Vector2(transform.localScale.x,transform.localScale.z));
 
         // Indirect args
         args[0] = (uint)GetGrassMeshCache().GetIndexCount(0);
