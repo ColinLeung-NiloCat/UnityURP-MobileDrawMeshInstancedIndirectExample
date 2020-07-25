@@ -30,7 +30,7 @@ download .apk: __________
  -------------
  This is a simplified example project, just to test DrawMeshInstancedIndirect API on mobile.  
  Does not contain any compute GPU culling and Acceleration Algorithms. It is as simple as possible, just 1 DrawMeshInstancedIndirect call.
- Lighting is not the main focus of this project, but >50% of time was spent on writing shader lighting & animation, you can have a look on shaders if you are interested.
+ Lighting is not the main focus of this project, but >50% of the time was spent on writing shader lighting & animation, you can have a look at the grass shader if you are interested.
  
 Asset that use DrawMeshInstancedIndirect?
 -------------------
