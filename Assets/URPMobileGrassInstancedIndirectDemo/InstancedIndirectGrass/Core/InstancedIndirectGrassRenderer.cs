@@ -99,10 +99,20 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         //spawn grass inside gizmo cube 
         for (int i = 0; i < instanceCount; i++)
         {
-            Vector3 pos = transform.position;
+            Vector3 pos = Vector3.zero;
+            //local pos
             pos.x += Random.Range(-1f, 1f) * transform.localScale.x;
             pos.z += Random.Range(-1f, 1f) * transform.localScale.z;
+
+            //local rotate
+            //TODO: allow this gameobject's rotation affect grass, make sure to update bending grass's imaginary camera rotation also
+
+            //world positon
+            pos += transform.position;
+
+            //world scale
             float size = Random.Range(2f, 5f);
+
             positions[i] = new Vector4(pos.x,pos.y,pos.z, size);
         }
 
