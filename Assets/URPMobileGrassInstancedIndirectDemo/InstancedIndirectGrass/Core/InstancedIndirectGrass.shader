@@ -1,9 +1,18 @@
-﻿Shader "Universal Render Pipeline/Custom/UnlitTexture"
+﻿Shader "MobileDrawMeshInstancedIndirect/SingleGrass"
 {
     Properties
     {
         [MainColor] _BaseColor("BaseColor", Color) = (1,1,1,1)
         _GroundColor("_GroundColor", Color) = (0.5,0.5,0.5)
+        _GrassWidth("_GrassWidth", Float) = 1
+        _GrassHeight("_GrassHeight", Float) = 1
+        _WindAIntensity("_WindAIntensity", Float) = 1
+        _WindAFrequency("_WindAFrequency", Float) = 2
+        _WindBIntensity("_WindBIntensity", Float) = 0.25
+        _WindBFrequency("_WindBFrequency", Float) = 7.7
+        //make SRP batcher happy
+        [HideInInspector]_PivotPosWS("_PivotPosWS", Vector) = (0,0,0,0)
+        [HideInInspector]_BoundSize("_BoundSize", Float) = 1
     }
 
     SubShader
@@ -12,7 +21,8 @@
 
         Pass
         {
-            Cull Off
+            Cull Back //use default culling because this shader is billboard 
+
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
@@ -52,60 +62,74 @@
                 half3 color        : COLOR;
             };
 
+
             CBUFFER_START(UnityPerMaterial)
-            half3 _BaseColor;
-            half3 _GroundColor;
-            StructuredBuffer<float4> _TransformBuffer;
-            float3 _PivotPosWS;
-            float _BoundSize;
+                float3 _PivotPosWS;
+                float _BoundSize;
+                float _GrassWidth;
+                float _GrassHeight;
+                float _WindAIntensity;
+                float _WindAFrequency;
+                float _WindBIntensity;
+                float _WindBFrequency;
+                half3 _BaseColor;
+                half3 _GroundColor;
+
+                StructuredBuffer<float4> _TransformBuffer;
             CBUFFER_END
 
             sampler2D _GrassBendingRT;
+
             Varyings vert(Attributes IN, uint instanceID : SV_InstanceID)
             {
                 Varyings OUT;
 
-                //.xyz is posWS,.w is scaleWS
+                //bufferData.xyz    is posWS inside ComputeBuffer
+                //bufferData.w      is scaleWS inside ComputeBuffer
                 float4 bufferData = _TransformBuffer[instanceID];
                 float3 perGrassPivotPosWS = bufferData.xyz;
-                float perGrassHeight = bufferData.w;
+                float perGrassHeight = bufferData.w * _GrassHeight;
 
-                //if grass stepped(bending)
+                //get "is grass stepped" data(bending)
                 float2 grassBendingUV = ((perGrassPivotPosWS.xz - _PivotPosWS.xz) / _BoundSize) * 0.5 + 0.5;//where is this grass inside bound (can optimize to 2 MAD)
                 float stepped = tex2Dlod(_GrassBendingRT, float4(grassBendingUV, 0, 0)).x;
 
                 //rotation(billboard grass LookAt() camera)
                 //=========================================
                 float3 cameraTransformRightWS = UNITY_MATRIX_V[0].xyz;//UNITY_MATRIX_V[0].xyz == world space camera Right unit vector
-                float3 cameraTransformForwardWS = UNITY_MATRIX_V[2].xyz;//UNITY_MATRIX_V[2].xyz == -world space camera Forward unit vector
+                float3 cameraTransformUpWS = UNITY_MATRIX_V[1].xyz;//UNITY_MATRIX_V[1].xyz == world space camera Up unit vector
+                float3 cameraTransformForwardWS = -UNITY_MATRIX_V[2].xyz;//UNITY_MATRIX_V[2].xyz == -world space camera Forward unit vector
 
-                //Expand Billboard (Left+right)
-                float3 positionOS = IN.positionOS.x * cameraTransformRightWS;
+                //Expand Billboard (billboard Left+right)
+                float3 positionOS = IN.positionOS.x * cameraTransformRightWS * _GrassWidth;
 
-                //Expand Billboard (Up)
-                positionOS += IN.positionOS.y * UNITY_MATRIX_V[1].xyz;         
+                //Expand Billboard (billboard Up)
+                positionOS += IN.positionOS.y * cameraTransformUpWS;         
                 //=========================================
 
                 //bending by RT (hard code)
-                float3 bendDir = -cameraTransformForwardWS;
-                bendDir.xz *= 0.5;
-                positionOS = lerp(positionOS.xyz + bendDir * positionOS.y / cameraTransformForwardWS.y, positionOS.xyz, stepped);//don't full bend, will produce ZFighting
+                float3 bendDir = cameraTransformForwardWS;
+                bendDir.xz *= 0.5; //looks better
+                positionOS = lerp(positionOS.xyz + bendDir * positionOS.y / -cameraTransformForwardWS.y, positionOS.xyz, stepped * 0.95 + 0.05);//don't fully bend, will produce ZFighting
 
                 //scale
                 positionOS.y *= perGrassHeight;
 
-                //camera distance scale (large if far away to camera, to hide pixel flicker)
+                //camera distance scale (make grass large if grass is far away to camera, to hide small pixel flicker)
                 float3 viewWS = _WorldSpaceCameraPos - perGrassPivotPosWS;
                 float lengthViewWS = length(viewWS);
                 positionOS += IN.positionOS.x * cameraTransformRightWS * max(0, lengthViewWS * 0.015);
 
-                //move to posWS
+                //move grass to target posWS
                 float3 positionWS = positionOS + perGrassPivotPosWS;
 
-                //wind animation
-                float3 windOffset = cameraTransformRightWS * sin(_Time.y * 4 + perGrassPivotPosWS.x * 0.1) * IN.positionOS.y * 0.4;
+                //wind animation (biilboard Left Right direction sin wave)            
+                float wind = sin(_Time.y * _WindAFrequency + perGrassPivotPosWS.x * 0.1) * _WindAIntensity; //windA
+                wind += sin(_Time.y * _WindBFrequency + perGrassPivotPosWS.x * 0.7) * _WindBIntensity; //windB
+                wind *= IN.positionOS.y; //only affect top region, don't affect root region
+                float3 windOffset = cameraTransformRightWS * wind; //swing using billboard left right direction
                 positionWS.xyz += windOffset;
-
+                
                 //complete posWS -> posCS
                 OUT.positionCS = TransformWorldToHClip(positionWS);
 
@@ -127,7 +151,7 @@
 
                 //direct diffuse 
                 half3 lighting = mainLight.color;
-                lighting *= saturate(dot(N, mainLight.direction) * 0.5 + 0.5);
+                lighting *= saturate(dot(N, mainLight.direction) * 0.5 + 0.5); //half lambert
 
                 lighting *= mainLight.shadowAttenuation;
 
@@ -138,13 +162,13 @@
                 OUT.color = albedo * lighting;
 
                 //direct Specular
-                float specular = dot(N,H);
+                float specular = saturate(dot(N,H));
+                specular *= specular;
                 specular *= specular;
                 specular *= specular;
                 specular *= specular;
 
-
-                OUT.color += specular * mainLight.color * mainLight.shadowAttenuation * 0.05 * (positionOS.y * 0.5 + 0.5); 
+                OUT.color += specular * mainLight.color * mainLight.shadowAttenuation * 0.1 * (positionOS.y * 0.5 + 0.5); 
 
                 //fog
                 float fogFactor = ComputeFogFactor(OUT.positionCS.z);
@@ -161,7 +185,6 @@
             }
             ENDHLSL
         }
-
 
         //copy pass, change LightMode to ShadowCaster will make grass cast shadow
         //copy pass, change LightMode to DepthOnly will make grass render into _CameraDepthTexture

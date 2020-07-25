@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿//see this for ref: https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstancedIndirect.html
+
+using UnityEngine;
+
 [ExecuteAlways]
 public class InstancedIndirectGrassRenderer : MonoBehaviour
 {
@@ -16,11 +19,11 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     void LateUpdate()
     {
-        // Update _TransformBuffer in grass shader
-        UpdateBuffers();
+        // Update _TransformBuffer in grass shader if needed
+        UpdateBuffersIfNeeded();
 
         // Render     
-        Graphics.DrawMeshInstancedIndirect(GetGrassMesh(), 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(1000.0f, 1000.0f, 1000.0f)), argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(1000.0f, 1000.0f, 1000.0f)), argsBuffer);
     }
     void OnDisable()
     {
@@ -40,28 +43,29 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         instanceCount = (int)(GUI.HorizontalSlider(new Rect(500, 100, 200, 30), instanceCount / 10000f, 1, 10)) *10000;
     }
 
-    Mesh GetGrassMesh()
+    Mesh GetGrassMeshCache()
     {
         if (!cachedGrassMesh)
         {
-            //if not exist, return a 5 vertices hardcode grass mesh
+            //if not exist, create a 3 vertices hardcode triangle grass mesh
             cachedGrassMesh = new Mesh();
-            Vector3[] verts = new Vector3[3];
 
-            //first grass
+            //first grass (vertices)
+            Vector3[] verts = new Vector3[3];
             verts[0] = new Vector3(-0.25f, 0);
             verts[1] = new Vector3(+0.25f, 0);
             verts[2] = new Vector3(-0.0f, 1);
+            //first grass (Triangles index)
+            int[] trinagles = new int[3] { 2, 1, 0, }; //order to fit Cull Back in grass shader
 
             cachedGrassMesh.SetVertices(verts);
-            int[] trinagles = new int[3] { 0, 1, 2,};
             cachedGrassMesh.SetTriangles(trinagles, 0);
         }
 
         return cachedGrassMesh;
     }
 
-    void UpdateBuffers()
+    void UpdateBuffersIfNeeded()
     {
         //early exit if no need update buffer
         if (cachedInstanceCount == instanceCount &&
@@ -70,10 +74,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             argsBuffer != null &&
             positionBuffer != null)
             {
-#if UNITY_EDITOR
-                if (Application.isPlaying)
-#endif
-                    return;
+                return;
             }
         //=============================================
         if (argsBuffer != null)
@@ -86,6 +87,9 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         Vector4[] positions = new Vector4[instanceCount];
         positionBuffer = new ComputeBuffer(positions.Length, sizeof(float)*4); //float4
 
+        //keep grass visual the same
+        Random.InitState(123);
+
         //spawn grass inside gizmo cube 
         for (int i = 0; i < instanceCount; i++)
         {
@@ -95,15 +99,18 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             float size = Random.Range(2f, 5f);
             positions[i] = new Vector4(pos.x,pos.y,pos.z, size);
         }
+
         positionBuffer.SetData(positions);
         instanceMaterial.SetBuffer("_TransformBuffer", positionBuffer);
         instanceMaterial.SetVector("_PivotPosWS", transform.position);
         instanceMaterial.SetFloat("_BoundSize", transform.localScale.x);
+
         // Indirect args
-        args[0] = (uint)GetGrassMesh().GetIndexCount(0);
+        args[0] = (uint)GetGrassMeshCache().GetIndexCount(0);
         args[1] = (uint)instanceCount;
-        args[2] = (uint)GetGrassMesh().GetIndexStart(0);
-        args[3] = (uint)GetGrassMesh().GetBaseVertex(0);
+        args[2] = (uint)GetGrassMeshCache().GetIndexStart(0);
+        args[3] = (uint)GetGrassMeshCache().GetBaseVertex(0);
+        args[4] = 0;
 
         argsBuffer.SetData(args);
 
