@@ -137,7 +137,7 @@
                 //bufferData.xyz    is posWS inside ComputeBuffer
                 //bufferData.w      is scaleWS inside ComputeBuffer
                 float4 bufferData = _TransformBuffer[instanceID];
-                float3 perGrassPivotPosWS = bufferData.xyz;
+                float3 perGrassPivotPosWS = bufferData.xyz * float3(_BoundSize.x,1,_BoundSize.y) + _PivotPosWS;
                 float perGrassHeight = bufferData.w * _GrassHeight;
 
                 //get "is grass stepped" data(bending)

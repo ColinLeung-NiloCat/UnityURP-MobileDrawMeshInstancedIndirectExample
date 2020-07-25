@@ -14,11 +14,9 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     public static InstancedIndirectGrassRenderer instance;
 
     private int cachedInstanceCount = -1;
-    private Vector3 cachedPivotPos = Vector3.negativeInfinity;
-    private Vector3 cachedLocalScale = Vector3.negativeInfinity;
     private Mesh cachedGrassMesh;
 
-    private ComputeBuffer positionBuffer;
+    private ComputeBuffer transformBigBuffer;
     private ComputeBuffer argsBuffer;
 
     void LateUpdate()
@@ -34,9 +32,9 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     void OnDisable()
     {
         //release all compute buffers
-        if (positionBuffer != null)
-            positionBuffer.Release();
-        positionBuffer = null;
+        if (transformBigBuffer != null)
+            transformBigBuffer.Release();
+        transformBigBuffer = null;
 
         if (argsBuffer != null)
             argsBuffer.Release();
@@ -73,25 +71,28 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     void UpdateBuffersIfNeeded()
     {
+        //always update
+        instanceMaterial.SetVector("_PivotPosWS", transform.position);
+        instanceMaterial.SetVector("_BoundSize", new Vector2(transform.localScale.x, transform.localScale.z));
+
         //early exit if no need update buffer
         if (cachedInstanceCount == instanceCount &&
-            cachedPivotPos == transform.position &&
-            cachedLocalScale == transform.localScale &&
             argsBuffer != null &&
-            positionBuffer != null)
+            transformBigBuffer != null)
             {
                 return;
             }
-        //=============================================
-        if (argsBuffer != null)
-            argsBuffer.Release();
-        uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
-        argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
-        if (positionBuffer != null)
-            positionBuffer.Release();
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        ///////////////////////////
+        // Transform buffer
+        ///////////////////////////
+        if (transformBigBuffer != null)
+            transformBigBuffer.Release();
         Vector4[] positions = new Vector4[instanceCount];
-        positionBuffer = new ComputeBuffer(positions.Length, sizeof(float)*4); //float4
+        transformBigBuffer = new ComputeBuffer(positions.Length, sizeof(float)*4); //float4 per grass
 
         //keep grass visual the same
         Random.InitState(123);
@@ -100,15 +101,13 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         for (int i = 0; i < instanceCount; i++)
         {
             Vector3 pos = Vector3.zero;
-            //local pos
-            pos.x += Random.Range(-1f, 1f) * transform.localScale.x;
-            pos.z += Random.Range(-1f, 1f) * transform.localScale.z;
+
+            //local pos (can define any local pos here, random is just an example)
+            pos.x = Random.Range(-1f, 1f);
+            pos.z = Random.Range(-1f, 1f);
 
             //local rotate
             //TODO: allow this gameobject's rotation affect grass, make sure to update bending grass's imaginary camera rotation also
-
-            //world positon
-            pos += transform.position;
 
             //world scale
             float size = Random.Range(2f, 5f);
@@ -116,12 +115,17 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             positions[i] = new Vector4(pos.x,pos.y,pos.z, size);
         }
 
-        positionBuffer.SetData(positions);
-        instanceMaterial.SetBuffer("_TransformBuffer", positionBuffer);
-        instanceMaterial.SetVector("_PivotPosWS", transform.position);
-        instanceMaterial.SetVector("_BoundSize", new Vector2(transform.localScale.x,transform.localScale.z));
+        transformBigBuffer.SetData(positions);
+        instanceMaterial.SetBuffer("_TransformBuffer", transformBigBuffer);
 
-        // Indirect args
+        ///////////////////////////
+        // Indirect args buffer
+        ///////////////////////////
+        if (argsBuffer != null)
+            argsBuffer.Release();
+        uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+        argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+
         args[0] = (uint)GetGrassMeshCache().GetIndexCount(0);
         args[1] = (uint)instanceCount;
         args[2] = (uint)GetGrassMeshCache().GetIndexStart(0);
@@ -130,9 +134,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
         argsBuffer.SetData(args);
 
-        //update cache to prevent future no-op update
+        //update cache to prevent future no-op buffer update, which waste performance
         cachedInstanceCount = instanceCount;
-        cachedPivotPos = transform.position;
-        cachedLocalScale = transform.localScale;
     }
 }
