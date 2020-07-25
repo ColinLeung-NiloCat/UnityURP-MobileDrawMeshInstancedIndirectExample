@@ -18,6 +18,14 @@ download .apk: __________
 - can draw 10,000 instance on almost any mobile GPU(e.g. adreno506) within 4ms, performance affected mainly by grass's vertex shader
 - can draw 100,000 instances on 2018/2019 flagship mobile GPU (adreno630) within 4ms, performance affected mainly by grass's vertex shader
  
+ Requirement
+ -----------------
+ android mobile device need Opengles3.2 / Vulkan
+ 
+ Editor
+ ------------
+ 2019.4.3f1
+ 
  Note
  -------------
  This is a simplified example project, just to test DrawMeshInstancedIndirect API on mobile.  
