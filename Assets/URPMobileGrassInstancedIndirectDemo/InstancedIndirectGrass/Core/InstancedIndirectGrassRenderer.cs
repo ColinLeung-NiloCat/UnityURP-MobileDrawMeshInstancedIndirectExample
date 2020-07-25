@@ -39,8 +39,8 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     void OnGUI()
     {
-        GUI.Label(new Rect(265+500, 100, 200, 30), "Instance Count: " + instanceCount.ToString());
-        instanceCount = (int)(GUI.HorizontalSlider(new Rect(500, 100, 200, 30), instanceCount / 10000f, 1, 10)) *10000;
+        GUI.Label(new Rect(500, 50, 200, 30), "Instance Count: " + instanceCount.ToString());
+        instanceCount = Mathf.Max(1,(int)(GUI.HorizontalSlider(new Rect(500, 100, 200, 30), instanceCount / 10000f, 0, 100)) *10000);
     }
 
     Mesh GetGrassMeshCache()

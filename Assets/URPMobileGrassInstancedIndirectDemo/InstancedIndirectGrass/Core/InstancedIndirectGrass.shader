@@ -110,6 +110,26 @@
 
             sampler2D _GrassBendingRT;
 
+            half3 ApplySingleDirectLight(Light light, half3 N, half3 V, half3 albedo, half positionOSY)
+            {
+                half3 H = normalize(light.direction + V);
+
+                //direct diffuse 
+                half3 lighting = light.color;
+                lighting *= saturate(dot(N, light.direction) * 0.5 + 0.5); //half lambert
+
+
+                half3 result = albedo * lighting;
+
+                //direct Specular
+                float specular = saturate(dot(N,H));
+                specular *= specular;
+                specular *= specular;
+                specular *= specular;
+                specular *= specular;
+
+                return (result + specular * light.color * light.shadowAttenuation * 0.1 * (positionOSY * 0.5 + 0.5)) * (light.shadowAttenuation * light.distanceAttenuation); 
+            }
             Varyings vert(Attributes IN, uint instanceID : SV_InstanceID)
             {
                 Varyings OUT;
@@ -179,34 +199,37 @@
                 half3 randomAddToN = sin(instanceID) * cameraTransformRightWS * 0.15;
                 half3 N = normalize(half3(0,1,0) + randomAddToN);//random normal per grass
                 half3 V = viewWS / lengthViewWS;
-                half3 H = normalize(mainLight.direction + V);
-
-                //direct diffuse 
-                half3 lighting = mainLight.color;
-                lighting *= saturate(dot(N, mainLight.direction) * 0.5 + 0.5); //half lambert
-
-                lighting *= mainLight.shadowAttenuation;
+                half3 albedo = lerp(_GroundColor,_BaseColor, IN.positionOS.y);
 
                 //indirect
-                lighting += SampleSH(0);
+                half3 lightingResult = SampleSH(0) * albedo;
 
-                half3 albedo = lerp(_GroundColor,_BaseColor, IN.positionOS.y);
-                OUT.color = albedo * lighting;
+                //main direct light
+                lightingResult += ApplySingleDirectLight(mainLight, N, V, albedo, positionOS.y);
 
-                //direct Specular
-                float specular = saturate(dot(N,H));
-                specular *= specular;
-                specular *= specular;
-                specular *= specular;
-                specular *= specular;
+                // Additional lights loop
+#if _ADDITIONAL_LIGHTS
 
-                OUT.color += specular * mainLight.color * mainLight.shadowAttenuation * 0.1 * (positionOS.y * 0.5 + 0.5); 
+                // Returns the amount of lights affecting the object being renderer.
+                // These lights are culled per-object in the forward renderer
+                int additionalLightsCount = GetAdditionalLightsCount();
+                for (int i = 0; i < additionalLightsCount; ++i)
+                {
+                    // Similar to GetMainLight, but it takes a for-loop index. This figures out the
+                    // per-object light index and samples the light buffer accordingly to initialized the
+                    // Light struct. If _ADDITIONAL_LIGHT_SHADOWS is defined it will also compute shadows.
+                    Light light = GetAdditionalLight(i, positionWS);
+
+                    // Same functions used to shade the main light.
+                    lightingResult += ApplySingleDirectLight(light, N, V, albedo, positionOS.y);
+                }
+#endif
 
                 //fog
                 float fogFactor = ComputeFogFactor(OUT.positionCS.z);
                 // Mix the pixel color with fogColor. You can optionaly use MixFogColor to override the fogColor
                 // with a custom one.
-                OUT.color = MixFog(OUT.color, fogFactor);
+                OUT.color = MixFog(lightingResult, fogFactor);
 
                 return OUT;
             }
