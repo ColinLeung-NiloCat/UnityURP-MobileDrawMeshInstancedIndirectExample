@@ -20,7 +20,7 @@ download .apk: __________
  
  Requirement
  -----------------
- android mobile device need Opengles3.2 / Vulkan
+ your android device must support Opengles3.2 / Vulkan
  
  Editor
  ------------
