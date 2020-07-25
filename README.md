@@ -33,7 +33,7 @@ download .apk: __________
  
  Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader lighting & animation, you can have a look at the InstancedIndirectGrass.shader if you are interested.  
  
- This project also contain an offscreen RT to render grass bending using trail renderer, it is very simple but result is good enough for this demo.
+ This project also contains an offscreen RT(R8) to render a top down grass bending area using trail renderer, it is very simple but the result is good enough for this demo.
  
 Asset that use DrawMeshInstancedIndirect?
 -------------------
