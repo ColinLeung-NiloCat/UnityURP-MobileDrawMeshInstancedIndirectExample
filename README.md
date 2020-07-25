@@ -3,6 +3,9 @@
  DrawMeshInstancedIndirect ON
  ![screenshot](https://i.imgur.com/DDPbFhQ.png)
  ![screenshot](https://i.imgur.com/rBvlLeG.png)
+ DrawMeshInstancedIndirect ON (grass bending)
+ ![screenshot](https://i.imgur.com/QDXbEZw.png)
+ ![screenshot](https://i.imgur.com/E7wEEPR.png)
  DrawMeshInstancedIndirect OFF
  ![screenshot](https://i.imgur.com/xOhTW6d.png)
 
