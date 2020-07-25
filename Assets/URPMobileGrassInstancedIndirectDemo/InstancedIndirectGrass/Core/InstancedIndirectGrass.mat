@@ -76,10 +76,12 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Surface: 0
-    - _WindAFrequency: 2
-    - _WindAIntensity: 1
+    - _WindAFrequency: 4
+    - _WindAIntensity: 1.77
     - _WindBFrequency: 7.7
     - _WindBIntensity: 0.25
+    - _WindCFrequency: 11.7
+    - _WindCIntensity: 0.125
     - _WindFrequency: 4
     - _WindIntensity: 1
     - _WorkflowMode: 1
@@ -91,3 +93,12 @@ Material:
     - _GroundColor: {r: 0.2195755, g: 0.46226418, b: 0.2581851, a: 1}
     - _PivotPosWS: {r: 6.2, g: 0, b: 27.1, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _WindADirection: {r: 0.1, g: 0.1, b: 0, a: 1}
+    - _WindATiling: {r: 0.1, g: 0.1, b: 0, a: 1}
+    - _WindAWrap: {r: 0.5, g: 0.5, b: 0, a: 1}
+    - _WindBDirection: {r: 0.35, g: 0, b: 0, a: 1}
+    - _WindBTiling: {r: 0.37, g: 3, b: 0, a: 1}
+    - _WindBWrap: {r: 0.5, g: 0.5, b: 0, a: 1}
+    - _WindCDirection: {r: 0.7, g: -0.1, b: 0, a: 1}
+    - _WindCTiling: {r: 0.77, g: 3, b: 0, a: 1}
+    - _WindCWrap: {r: 0.5, g: 0.5, b: 0, a: 1}

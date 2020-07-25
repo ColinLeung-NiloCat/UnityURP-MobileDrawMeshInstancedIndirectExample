@@ -56,7 +56,7 @@ LightmapSettings:
   m_LightmapEditorSettings:
     serializedVersion: 12
     m_Resolution: 2
-    m_BakeResolution: 0.5
+    m_BakeResolution: 0.1
     m_AtlasSize: 1024
     m_AO: 0
     m_AOMaxDistance: 1

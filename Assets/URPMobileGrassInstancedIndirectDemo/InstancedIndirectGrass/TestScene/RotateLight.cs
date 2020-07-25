@@ -6,13 +6,7 @@ public class RotateLight : MonoBehaviour
 {
     public Transform light;
 
-    float YRotateSpeed = 0;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public float YRotateSpeed = 45;
 
     // Update is called once per frame
     void Update()
@@ -22,6 +16,7 @@ public class RotateLight : MonoBehaviour
 
     private void OnGUI()
     {
+        GUI.Label(new Rect(500, 250, 200, 30), "Light Rotate Speed");
         YRotateSpeed = (int)(GUI.HorizontalSlider(new Rect(500, 300, 200, 30), YRotateSpeed, 0, 90));
     }
 }

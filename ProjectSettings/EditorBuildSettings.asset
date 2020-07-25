@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/URPMobileGrassInstancedIndirectDemo/InstancedIndirectGrass/TestScene/scene.unity
+    path: Assets/URPMobileGrassInstancedIndirectDemo/InstancedIndirectGrass/TestScene/URPMobileGrassInstancedIndirectDemoScene.unity
     guid: 1d2ccb163d8cae645adc157ff97b7669
   m_configObjects: {}
