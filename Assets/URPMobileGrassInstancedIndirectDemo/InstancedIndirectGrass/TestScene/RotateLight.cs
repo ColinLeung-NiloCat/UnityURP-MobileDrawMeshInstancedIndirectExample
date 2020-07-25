@@ -17,8 +17,8 @@ public class RotateLight : MonoBehaviour
 
     private void OnGUI()
     {
-        GUI.Label(new Rect(500, 250, 200, 30), "Light Rotate Speed");
-        YRotateSpeed = (int)(GUI.HorizontalSlider(new Rect(500, 300, 200, 30), YRotateSpeed, 0, 90));
+        GUI.Label(new Rect(300, 150, 200, 30), "Light Rotate Speed");
+        YRotateSpeed = (int)(GUI.HorizontalSlider(new Rect(300, 200, 200, 30), YRotateSpeed, 0, 90));
 
         mainLight.enabled = GUI.Toggle(new Rect(100, 150, 200, 30), mainLight.enabled, "Main Light On/OFF");
         pointLight.enabled = GUI.Toggle(new Rect(100, 250, 200, 30), pointLight.enabled, "PointLight Light On/OFF");
