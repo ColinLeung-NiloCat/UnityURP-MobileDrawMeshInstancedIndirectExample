@@ -169,7 +169,8 @@
                 //bending by RT (hard code)
                 float3 bendDir = cameraTransformForwardWS;
                 bendDir.xz *= 0.5; //make grass shorter when bending, looks better
-                positionOS = lerp(positionOS.xyz + bendDir * positionOS.y / -cameraTransformForwardWS.y, positionOS.xyz, stepped * 0.95 + 0.05);//don't fully bend, will produce ZFighting
+                bendDir.y = min(-0.5,bendDir.y);//prevent grass become too long if camera forward is / near parallel to ground
+                positionOS = lerp(positionOS.xyz + bendDir * positionOS.y / -bendDir.y, positionOS.xyz, stepped * 0.95 + 0.05);//don't fully bend, will produce ZFighting
 
                 //per grass height scale
                 positionOS.y *= perGrassHeight;
