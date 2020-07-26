@@ -47,7 +47,13 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     void OnGUI()
     {
         GUI.Label(new Rect(300, 50, 200, 30), "Instance Count: " + instanceCount.ToString());
-        instanceCount = Mathf.Max(1,(int)(GUI.HorizontalSlider(new Rect(300, 100, 200, 30), instanceCount / 10000f, 0, 10)) *10000);
+        instanceCount = Mathf.Max(1,(int)(GUI.HorizontalSlider(new Rect(300, 100, 200, 30), instanceCount / 10000f, 0, 20)) *10000);
+
+        GUI.Label(new Rect(300, 150, 200, 30), "Bound X: " + transform.localScale.x);
+        float xScale = Mathf.Max(1, (int)(GUI.HorizontalSlider(new Rect(300, 200, 200, 30), transform.localScale.x, 10, 100)));
+        GUI.Label(new Rect(300, 250, 200, 30), "Bound Z: " + transform.localScale.z);
+        float ZScale = Mathf.Max(1, (int)(GUI.HorizontalSlider(new Rect(300, 300, 200, 30), transform.localScale.z, 10, 100)));
+        transform.localScale = new Vector3(xScale, transform.localScale.y, ZScale);
     }
 
     Mesh GetGrassMeshCache()
