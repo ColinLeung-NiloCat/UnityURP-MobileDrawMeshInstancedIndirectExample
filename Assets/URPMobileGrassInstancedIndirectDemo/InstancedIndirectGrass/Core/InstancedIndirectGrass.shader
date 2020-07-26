@@ -204,8 +204,10 @@
                 mainLight = GetMainLight();
 #endif
                 half3 randomAddToN = (_RandomNormal*sin(instanceID)+wind*-0.25) * cameraTransformRightWS;//random normal per grass 
-                //default grass's normal is pointing upward in world space, it is an important but simple grass normal trick
-                half3 N = normalize(half3(0,1,0) + randomAddToN);
+                //default grass's normal is pointing 100% upward in world space, it is an important but simple grass normal trick
+                //-apply random to normal else lighting is too uniform
+                //-apply cameraTransformForwardWS to normal because grass is billboard
+                half3 N = normalize(half3(0,1,0) + randomAddToN - cameraTransformForwardWS*0.5);
 
                 half3 V = viewWS / ViewWSLength;
                 half3 albedo = lerp(_GroundColor,_BaseColor, IN.positionOS.y);//you can use texture if you wish to
