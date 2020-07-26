@@ -20,7 +20,7 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  
  Requirement
  -----------------
- your android device must support Opengles3.2 / Vulkan
+ if you try the pre-built .apk, your android device must support Opengles3.2 / Vulkan
  
  Editor
  ------------
@@ -28,12 +28,12 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  
  Note
  -------------
- This is a simplified example project, just to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
- Does not contain any compute GPU culling and Acceleration Algorithms. It is as simple as possible, just 1 DrawMeshInstancedIndirect call.
+ This is a simplified example project to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
+ Does not contain any compute GPU culling and Acceleration Algorithms. It is as simple as possible, just 1 DrawMeshInstancedIndirect call, nothing else.
  
- Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
+ Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader's lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
  
- This project also contains a RendererFeature(GrassBendingRTPrePass.cs) to render an offscreen RT(R8) recording top down view grass bending area using trail renderer, it is a very simple method but the result is good enough for this demo.
+ This project also contains a RendererFeature(GrassBendingRTPrePass.cs) to render an offscreen RT(R8), which renders top down view grass bending area (by trail renderer following moving objects), it is a very simple method but the result is good enough for this demo.
  
 some assets that use DrawMeshInstancedIndirect also in the asset store
 -------------------
