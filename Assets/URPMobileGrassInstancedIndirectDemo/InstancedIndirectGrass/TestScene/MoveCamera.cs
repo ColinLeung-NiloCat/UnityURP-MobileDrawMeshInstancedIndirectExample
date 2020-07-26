@@ -10,7 +10,7 @@ public class MoveCamera : MonoBehaviour
     int index = 0;
     private void OnGUI()
     {
-        if(GUI.Button(new Rect(100, 750, 200, 100), "Move camera"))
+        if(GUI.Button(new Rect(100, 450, 200, 100), "Move camera"))
         {
             index = (index+1) % allCameraTransforms.Count;
         }
