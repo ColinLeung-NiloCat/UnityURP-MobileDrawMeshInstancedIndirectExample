@@ -19,9 +19,12 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     private ComputeBuffer transformBigBuffer;
     private ComputeBuffer argsBuffer;
 
-    void LateUpdate()
+    private void Awake()
     {
         instance = this; // assign global ref using this script
+    }
+    void LateUpdate()
+    {
 
         // Update _TransformBuffer in grass shader if needed
         UpdateBuffersIfNeeded();
