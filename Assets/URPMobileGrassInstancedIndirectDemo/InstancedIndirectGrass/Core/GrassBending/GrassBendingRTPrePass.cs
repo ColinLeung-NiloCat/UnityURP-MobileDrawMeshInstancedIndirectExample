@@ -17,7 +17,9 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
         // The render pipeline will ensure target setup and clearing happens in an performance manner.
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            cmd.GetTemporaryRT(_GrassBendingRT_pid, new RenderTextureDescriptor(128, 128, RenderTextureFormat.R8,0));//128*128 is big enough for this demo
+            //512*512 is big enough for this demo's max grass count, can use a much smaller RT in regular use case
+            //TODO: make RT render pos follow main camera view frustrum, allow using a much smaller size RT
+            cmd.GetTemporaryRT(_GrassBendingRT_pid, new RenderTextureDescriptor(512, 512, RenderTextureFormat.R8,0));
             ConfigureTarget(_GrassBendingRT_rti);
             ConfigureClear(ClearFlag.All, Color.white);
         }

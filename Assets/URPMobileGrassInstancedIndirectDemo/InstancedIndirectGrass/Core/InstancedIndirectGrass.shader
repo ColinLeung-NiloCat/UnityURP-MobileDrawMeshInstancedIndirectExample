@@ -29,8 +29,8 @@
         [Header(Lighting)]
         _RandomNormal("_RandomNormal", Float) = 0.15
 
-
         //make SRP batcher happy
+        [HideInInspector]_DrawDistance("_DrawDistance", Float) = 100
         [HideInInspector]_PivotPosWS("_PivotPosWS", Vector) = (0,0,0,0)
         [HideInInspector]_BoundSize("_BoundSize", Vector) = (1,1,0)
     }
@@ -109,6 +109,8 @@
 
                 half _RandomNormal;
 
+                float _DrawDistance;
+
                 StructuredBuffer<float4> _TransformBuffer;
             CBUFFER_END
 
@@ -172,10 +174,14 @@
                 //per grass height scale
                 positionOS.y *= perGrassHeight;
 
-                //camera distance scale (make grass width larger if grass is far away to camera, to hide smaller than pixel size triangle flicker)
+                //camera distance scale (make grass width larger if grass is far away to camera, to hide smaller than pixel size triangle flicker)          
                 float3 viewWS = _WorldSpaceCameraPos - perGrassPivotPosWS;
                 float ViewWSLength = length(viewWS);
-                positionOS += IN.positionOS.x * cameraTransformRightWS * max(0, ViewWSLength * 0.0225);
+                positionOS += cameraTransformRightWS * max(0, ViewWSLength * 0.0225);
+                
+
+                //Rasterisation optimization: camera draw disatance (skip far trinagle's Rasterisation)
+                positionOS += ViewWSLength < _DrawDistance ? 0 : 9999999;//move very far away
 
                 //move grass posOS -> posWS
                 float3 positionWS = positionOS + perGrassPivotPosWS;

@@ -13,9 +13,14 @@ public class MoveCamera : MonoBehaviour
         if(GUI.Button(new Rect(100, 750, 200, 100), "Move camera"))
         {
             index = (index+1) % allCameraTransforms.Count;
-            Transform current = allCameraTransforms[index];
-            camera.transform.position = current.position;
-            camera.transform.rotation = current.rotation;
         }
+    }
+
+    private void LateUpdate()
+    {
+        Transform target = allCameraTransforms[index];
+
+        camera.transform.position = Vector3.Lerp(camera.transform.position,target.position, Time.deltaTime * 2);
+        camera.transform.rotation = Quaternion.Slerp(camera.transform.rotation,target.rotation, Time.deltaTime * 2);
     }
 }
