@@ -5,8 +5,8 @@ using UnityEngine;
 [ExecuteAlways]
 public class InstancedIndirectGrassRenderer : MonoBehaviour
 {
-    [Range(1,100000)]
-    public int instanceCount = 20000;
+    [Range(1,1000000)]
+    public int instanceCount = 50000;
     public float drawDistance = 125;
     public Material instanceMaterial;
 

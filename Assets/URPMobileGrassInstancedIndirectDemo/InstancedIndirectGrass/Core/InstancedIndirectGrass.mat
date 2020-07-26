@@ -61,7 +61,7 @@ Material:
     - _BumpScale: 1
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DrawDistance: 150
+    - _DrawDistance: 125
     - _DstBlend: 0
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
@@ -92,7 +92,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 0.41936636, g: 0.7169812, b: 0.29423285, a: 1}
-    - _BoundSize: {r: 50, g: 50, b: 0, a: 0}
+    - _BoundSize: {r: 55.9017, g: 55.9017, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GroundColor: {r: 0.2195755, g: 0.46226418, b: 0.2581851, a: 1}
