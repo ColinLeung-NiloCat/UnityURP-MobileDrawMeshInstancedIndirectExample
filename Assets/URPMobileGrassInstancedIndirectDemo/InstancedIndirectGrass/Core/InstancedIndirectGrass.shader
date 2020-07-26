@@ -5,7 +5,7 @@
         [MainColor] _BaseColor("BaseColor", Color) = (1,1,1,1)
         _GroundColor("_GroundColor", Color) = (0.5,0.5,0.5)
 
-        [Header(Grass shape)]
+        [Header(Grass Shape)]
         _GrassWidth("_GrassWidth", Float) = 1
         _GrassHeight("_GrassHeight", Float) = 1
 
@@ -25,6 +25,9 @@
         _WindCFrequency("_WindCFrequency", Float) = 11.7
         _WindCTiling("_WindCTiling", Vector) = (0.77,3,0)
         _WindCWrap("_WindCWrap", Vector) = (0.5,0.5,0)
+
+        [Header(Lighting)]
+        _RandomNormal("_RandomNormal", Float) = 0.15
 
 
         //make SRP batcher happy
@@ -104,6 +107,8 @@
                 half3 _BaseColor;
                 half3 _GroundColor;
 
+                half _RandomNormal;
+
                 StructuredBuffer<float4> _TransformBuffer;
             CBUFFER_END
 
@@ -131,6 +136,7 @@
                 half3 result = (albedo * directDiffuse + directSpecular) * lighting;
                 return result; 
             }
+
             Varyings vert(Attributes IN, uint instanceID : SV_InstanceID)
             {
                 Varyings OUT;
@@ -138,18 +144,18 @@
                 //bufferData.xyz    is posWS inside ComputeBuffer
                 //bufferData.w      is scaleWS inside ComputeBuffer
                 float4 bufferData = _TransformBuffer[instanceID];
-                float3 perGrassPivotPosWS = bufferData.xyz * float3(_BoundSize.x,1,_BoundSize.y) + _PivotPosWS;
+                float3 perGrassPivotPosWS = bufferData.xyz * float3(_BoundSize.x,1,_BoundSize.y) + _PivotPosWS; //posOS -> posWS
                 float perGrassHeight = bufferData.w * _GrassHeight;
 
-                //get "is grass stepped" data(bending)
-                float2 grassBendingUV = ((perGrassPivotPosWS.xz - _PivotPosWS.xz) / _BoundSize) * 0.5 + 0.5;//where is this grass inside bound (can optimize to 2 MAD)
+                //get "is grass stepped" data(bending) from RT
+                float2 grassBendingUV = ((perGrassPivotPosWS.xz - _PivotPosWS.xz) / _BoundSize) * 0.5 + 0.5;//claculate where is this grass inside bound (can optimize to 2 MAD)
                 float stepped = tex2Dlod(_GrassBendingRT, float4(grassBendingUV, 0, 0)).x;
 
-                //rotation(billboard grass LookAt() camera)
+                //rotation(make grass LookAt() camera just like a billboard)
                 //=========================================
                 float3 cameraTransformRightWS = UNITY_MATRIX_V[0].xyz;//UNITY_MATRIX_V[0].xyz == world space camera Right unit vector
                 float3 cameraTransformUpWS = UNITY_MATRIX_V[1].xyz;//UNITY_MATRIX_V[1].xyz == world space camera Up unit vector
-                float3 cameraTransformForwardWS = -UNITY_MATRIX_V[2].xyz;//UNITY_MATRIX_V[2].xyz == -world space camera Forward unit vector
+                float3 cameraTransformForwardWS = -UNITY_MATRIX_V[2].xyz;//UNITY_MATRIX_V[2].xyz == -1 * world space camera Forward unit vector
 
                 //Expand Billboard (billboard Left+right)
                 float3 positionOS = IN.positionOS.x * cameraTransformRightWS * _GrassWidth;
@@ -160,30 +166,30 @@
 
                 //bending by RT (hard code)
                 float3 bendDir = cameraTransformForwardWS;
-                bendDir.xz *= 0.5; //looks better
+                bendDir.xz *= 0.5; //make grass shorter when bending, looks better
                 positionOS = lerp(positionOS.xyz + bendDir * positionOS.y / -cameraTransformForwardWS.y, positionOS.xyz, stepped * 0.95 + 0.05);//don't fully bend, will produce ZFighting
 
-                //scale
+                //per grass height scale
                 positionOS.y *= perGrassHeight;
 
-                //camera distance scale (make grass large if grass is far away to camera, to hide small pixel flicker)
+                //camera distance scale (make grass width larger if grass is far away to camera, to hide smaller than pixel size triangle flicker)
                 float3 viewWS = _WorldSpaceCameraPos - perGrassPivotPosWS;
-                float lengthViewWS = length(viewWS);
-                positionOS += IN.positionOS.x * cameraTransformRightWS * max(0, lengthViewWS * 0.015);
+                float ViewWSLength = length(viewWS);
+                positionOS += IN.positionOS.x * cameraTransformRightWS * max(0, ViewWSLength * 0.0225);
 
-                //move grass to target posWS
+                //move grass posOS -> posWS
                 float3 positionWS = positionOS + perGrassPivotPosWS;
 
-                //wind animation (biilboard Left Right direction sin wave)            
+                //wind animation (biilboard Left Right direction only sin wave)            
                 float wind = 0;
                 wind += (sin(_Time.y * _WindAFrequency + perGrassPivotPosWS.x * _WindATiling.x + perGrassPivotPosWS.z * _WindATiling.y)*_WindAWrap.x+_WindAWrap.y) * _WindAIntensity; //windA
                 wind += (sin(_Time.y * _WindBFrequency + perGrassPivotPosWS.x * _WindBTiling.x + perGrassPivotPosWS.z * _WindBTiling.y)*_WindBWrap.x+_WindBWrap.y) * _WindBIntensity; //windB
                 wind += (sin(_Time.y * _WindCFrequency + perGrassPivotPosWS.x * _WindCTiling.x + perGrassPivotPosWS.z * _WindCTiling.y)*_WindCWrap.x+_WindCWrap.y) * _WindCIntensity; //windC
-                wind *= IN.positionOS.y; //only affect top region, don't affect root region
+                wind *= IN.positionOS.y; //wind only affect top region, don't affect root region
                 float3 windOffset = cameraTransformRightWS * wind; //swing using billboard left right direction
                 positionWS.xyz += windOffset;
                 
-                //complete posWS -> posCS
+                //vertex position logic done, complete posWS -> posCS
                 OUT.positionCS = TransformWorldToHClip(positionWS);
 
                 /////////////////////////////////////////////////////////////////////
@@ -197,10 +203,12 @@
 #else
                 mainLight = GetMainLight();
 #endif
-                half3 randomAddToN = sin(instanceID) * cameraTransformRightWS * 0.15;
-                half3 N = normalize(half3(0,1,0) + randomAddToN);//random normal per grass
-                half3 V = viewWS / lengthViewWS;
-                half3 albedo = lerp(_GroundColor,_BaseColor, IN.positionOS.y);
+                half3 randomAddToN = (_RandomNormal*sin(instanceID)+wind*-0.25) * cameraTransformRightWS;//random normal per grass 
+                //default grass's normal is pointing upward in world space, it is an important but simple grass normal trick
+                half3 N = normalize(half3(0,1,0) + randomAddToN);
+
+                half3 V = viewWS / ViewWSLength;
+                half3 albedo = lerp(_GroundColor,_BaseColor, IN.positionOS.y);//you can use texture if you wish to
 
                 //indirect
                 half3 lightingResult = SampleSH(0) * albedo;
