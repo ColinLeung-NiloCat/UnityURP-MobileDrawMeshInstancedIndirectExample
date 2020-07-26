@@ -15,8 +15,8 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  Why create this project?
  -------------
  To demonstrate DrawMeshInstancedIndirect API on mobile devices.
-- can draw 100,000 instance on almost any mobile GPU(e.g. adreno506) within 5ms, performance mainly affected by visible grass count on screen
-- can draw 1,000,000 instances on 2018/2019 flagship mobile GPU (adreno630) within 7ms, performance mainly affected by visible grass count on screen
+- can draw 50,000 instance on almost any mobile GPU(e.g. adreno506) within 5ms, performance mainly affected by visible grass count on screen
+- can draw 1,000,000 instances on 2018/2019 flagship mobile GPU (adreno630) within 8ms, performance mainly affected by visible grass count on screen
  
  Requirement
  -----------------
