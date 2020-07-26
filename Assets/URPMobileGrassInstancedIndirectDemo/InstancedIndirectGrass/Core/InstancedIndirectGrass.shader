@@ -42,7 +42,7 @@
         Pass
         {
             Cull Back //use default culling because this shader is billboard 
-
+            ZTest Less
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
