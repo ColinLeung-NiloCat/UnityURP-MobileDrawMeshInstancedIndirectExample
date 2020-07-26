@@ -79,7 +79,6 @@
                 half3 color        : COLOR;
             };
 
-
             CBUFFER_START(UnityPerMaterial)
                 float3 _PivotPosWS;
                 float2 _BoundSize;
@@ -115,20 +114,22 @@
                 half3 H = normalize(light.direction + V);
 
                 //direct diffuse 
-                half3 lighting = light.color;
-                lighting *= saturate(dot(N, light.direction) * 0.5 + 0.5); //half lambert
+                half directDiffuse = dot(N, light.direction) * 0.5 + 0.5; //half lambert, to fake grass SSS
 
+                //direct specular
+                float directSpecular = saturate(dot(N,H));
+                //pow(directSpecular,8)
+                directSpecular *= directSpecular;
+                directSpecular *= directSpecular;
+                directSpecular *= directSpecular;
+                //directSpecular *= directSpecular; //enable this line = change to pow(directSpecular,16)
 
-                half3 result = albedo * lighting;
+                //add direct directSpecular to result
+                directSpecular *= 0.1 * positionOSY;//only apply directSpecular to grass's top area, to simulate grass AO
 
-                //direct Specular
-                float specular = saturate(dot(N,H));
-                specular *= specular;
-                specular *= specular;
-                specular *= specular;
-                specular *= specular;
-
-                return (result + specular * light.color * light.shadowAttenuation * 0.1 * (positionOSY * 0.5 + 0.5)) * (light.shadowAttenuation * light.distanceAttenuation); 
+                half3 lighting = light.color * (light.shadowAttenuation * light.distanceAttenuation);
+                half3 result = (albedo * directDiffuse + directSpecular) * lighting;
+                return result; 
             }
             Varyings vert(Attributes IN, uint instanceID : SV_InstanceID)
             {
