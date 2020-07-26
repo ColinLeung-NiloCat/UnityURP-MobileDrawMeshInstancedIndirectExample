@@ -17,7 +17,7 @@ public class GrassBendingRTPrePass : ScriptableRendererFeature
         // The render pipeline will ensure target setup and clearing happens in an performance manner.
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            cmd.GetTemporaryRT(_GrassBendingRT_pid, new RenderTextureDescriptor(64, 64, RenderTextureFormat.R8,0));//64*64 is big enough for this demo
+            cmd.GetTemporaryRT(_GrassBendingRT_pid, new RenderTextureDescriptor(128, 128, RenderTextureFormat.R8,0));//128*128 is big enough for this demo
             ConfigureTarget(_GrassBendingRT_rti);
             ConfigureClear(ClearFlag.All, Color.white);
         }
