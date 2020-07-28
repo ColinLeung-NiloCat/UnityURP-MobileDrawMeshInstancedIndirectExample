@@ -146,13 +146,9 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             pos.z *= transform.lossyScale.z;
             pos += transform.position;
 
-            //local rotate
-            //TODO: allow this gameobject's rotation affect grass, make sure to update bending grass's 0x camera rotation also
+            float seed = UnityEngine.Random.Range(0f, 1f);
 
-            //world scale
-            float size = UnityEngine.Random.Range(2f, 5f);
-
-            positions[i] = new Vector4(pos.x,pos.y,pos.z, size);
+            positions[i] = new Vector4(pos.x,pos.y,pos.z, seed);
         }
 
         allInstanceTransformBuffer.SetData(positions);

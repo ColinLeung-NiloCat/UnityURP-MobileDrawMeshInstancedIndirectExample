@@ -144,7 +144,9 @@
                 //bufferData.w      is scaleWS inside ComputeBuffer
                 float4 bufferData = _TransformBuffer[instanceID];
                 float3 perGrassPivotPosWS = bufferData.xyz;//we transform to posWS in C# now
-                float perGrassHeight = bufferData.w * _GrassHeight;
+                float seed01 = bufferData.w;
+                float seedNegative1ToPositive1 = seed01 * 2 - 1;
+                float perGrassHeight = lerp(2,5,seed01) * _GrassHeight;
 
                 //get "is grass stepped" data(bending) from RT
                 float2 grassBendingUV = ((perGrassPivotPosWS.xz - _PivotPosWS.xz) / _BoundSize) * 0.5 + 0.5;//claculate where is this grass inside bound (can optimize to 2 MAD)
@@ -172,11 +174,12 @@
                 //per grass height scale
                 positionOS.y *= perGrassHeight;
 
-                //camera distance scale (make grass width larger if grass is far away to camera, to hide smaller than pixel size triangle flicker)          
+                //camera distance scale (make grass width larger if grass is far away to camera, to hide smaller than pixel size triangle flicker)        
                 float3 viewWS = _WorldSpaceCameraPos - perGrassPivotPosWS;
                 float ViewWSLength = length(viewWS);
-                positionOS += cameraTransformRightWS * max(0, ViewWSLength * 0.0225);
+                positionOS += cameraTransformRightWS * IN.positionOS.x * max(0, ViewWSLength * 0.0225);
                 
+
                 //move grass posOS -> posWS
                 float3 positionWS = positionOS + perGrassPivotPosWS;
 
@@ -203,7 +206,7 @@
 #else
                 mainLight = GetMainLight();
 #endif
-                half3 randomAddToN = (_RandomNormal*sin(instanceID)+wind*-0.25) * cameraTransformRightWS;//random normal per grass 
+                half3 randomAddToN = (_RandomNormal* seedNegative1ToPositive1 + wind * -0.25) * cameraTransformRightWS;//random normal per grass 
                 //default grass's normal is pointing 100% upward in world space, it is an important but simple grass normal trick
                 //-apply random to normal else lighting is too uniform
                 //-apply cameraTransformForwardWS to normal because grass is billboard
