@@ -42,7 +42,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
         cullingComputeShader.SetBuffer(0, "_AllInstancesTransformBuffer", allInstanceTransformBuffer);
         cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
-        cullingComputeShader.Dispatch(0, Mathf.CeilToInt(instanceCount/1024), 1, 1);
+        cullingComputeShader.Dispatch(0, Mathf.CeilToInt(instanceCount/1024f), 1, 1);
         ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
 
         // Render     
