@@ -14,9 +14,12 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  
  Why create this project?
  -------------
- To demonstrate DrawMeshInstancedIndirect API on mobile devices.
-- can draw 50,000 instances on almost any mobile GPU(e.g. adreno506) within 5ms, performance mainly affected by visible grass count on screen
-- can draw 1,000,000 instances on 2018/2019 flagship mobile GPU (adreno630) within 8ms, performance mainly affected by visible grass count on screen
+ To demonstrate the only API that can draw millions of instance -> DrawMeshInstancedIndirect, running on mobile devices.
+ 
+ How fast is DrawMeshInstancedIndirect API?
+---------------
+- can draw 4 million instances on Samsung Galaxy A70 (GPU = adreno612, not a strong GPU), 30fps, performance mainly affected by visible grass count on screen
+- can draw 10 million instances on most of the 2018/2019 flagship mobiles (GPU = adreno630 or better), >30fps, performance mainly affected by visible grass count on screen
  
  Requirement
  -----------------
@@ -29,13 +32,15 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  Note
  -------------
  This is a simplified example project to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
- Does not contain any compute GPU culling and Acceleration Algorithms. It is as simple as possible, just 1 DrawMeshInstancedIndirect call, nothing else.
+ This project is as simple as possible, only contain a minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else.
  
  Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader's lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
  
  This project also contains a RendererFeature(GrassBendingRTPrePass.cs) to render an offscreen RT(R8), which renders top down view grass bending area (by trail renderer following moving objects), it is a very simple method but the result is good enough for this demo.
  
-some assets that use DrawMeshInstancedIndirect also in the asset store
+reference
 -------------------
+- https://github.com/ellioman/Indirect-Rendering-With-Compute-Shaders
 - https://assetstore.unity.com/packages/tools/utilities/gpu-instancer-117566
 - https://assetstore.unity.com/packages/tools/terrain/advanced-terrain-grass-100014
+
