@@ -1,0 +1,23 @@
+﻿#pragma kernel CSMain
+
+//Matrix4x4 v = Camera.main.worldToCameraMatrix;
+//Matrix4x4 p = Camera.main.projectionMatrix; //unity C# use opengl standard projection matrix
+//cullingComputeShader.SetMatrix("_VPMatrix", p * v); //set from C#
+float4x4 _VPMatrix;
+float _MaxDrawDistance;
+StructuredBuffer<float4> _AllInstancesTransformBuffer; //will not change until instance count change
+AppendStructuredBuffer<float4> _VisibleInstanceOnlyTransformBuffer; //will set counter to 0 per frame, then fill in by this compute shader
+
+[numthreads(1024,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+	float4 currentData = _AllInstancesTransformBuffer[id.x]; 
+	float4 absPosCS = abs(mul(_VPMatrix,float4(currentData.xyz,1.0))); //currentData.xyz is posWS
+
+	//do culling test in clip space, result is the same as doing test in NDC space.
+	//prefer clip space here because doing culling test in clip space is faster than doing culling test in NDC, because we can skip 1 division.
+	//the test is using OpenGL standard projection matrix, because all matrix from unity C# is OpenGL standard
+	//if instance is inside camera frustum, and is within draw distance, we append it to _VisibleInstanceOnlyTransformBuffer
+    if (absPosCS.z <= absPosCS.w && absPosCS.y <= absPosCS.w && absPosCS.x <= absPosCS.w && absPosCS.w <= _MaxDrawDistance)
+    	_VisibleInstanceOnlyTransformBuffer.Append(currentData);
+}

@@ -30,7 +30,6 @@
         _RandomNormal("_RandomNormal", Float) = 0.15
 
         //make SRP batcher happy
-        [HideInInspector]_DrawDistance("_DrawDistance", Float) = 100
         [HideInInspector]_PivotPosWS("_PivotPosWS", Vector) = (0,0,0,0)
         [HideInInspector]_BoundSize("_BoundSize", Vector) = (1,1,0)
     }
@@ -109,8 +108,6 @@
 
                 half _RandomNormal;
 
-                float _DrawDistance;
-
                 StructuredBuffer<float4> _TransformBuffer;
             CBUFFER_END
 
@@ -146,7 +143,7 @@
                 //bufferData.xyz    is posWS inside ComputeBuffer
                 //bufferData.w      is scaleWS inside ComputeBuffer
                 float4 bufferData = _TransformBuffer[instanceID];
-                float3 perGrassPivotPosWS = bufferData.xyz * float3(_BoundSize.x,1,_BoundSize.y) + _PivotPosWS; //posOS -> posWS
+                float3 perGrassPivotPosWS = bufferData.xyz;//we transform to posWS in C# now
                 float perGrassHeight = bufferData.w * _GrassHeight;
 
                 //get "is grass stepped" data(bending) from RT
@@ -180,10 +177,6 @@
                 float ViewWSLength = length(viewWS);
                 positionOS += cameraTransformRightWS * max(0, ViewWSLength * 0.0225);
                 
-
-                //Rasterisation optimization: camera draw disatance (skip far trinagle's Rasterisation)
-                positionOS += ViewWSLength < _DrawDistance ? 0 : 9999999;//move very far away
-
                 //move grass posOS -> posWS
                 float3 positionWS = positionOS + perGrassPivotPosWS;
 

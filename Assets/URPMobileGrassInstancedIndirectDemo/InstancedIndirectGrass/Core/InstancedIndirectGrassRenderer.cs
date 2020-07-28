@@ -1,5 +1,6 @@
 ﻿//see this for ref: https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstancedIndirect.html
 
+using System;
 using UnityEngine;
 
 [ExecuteAlways]
@@ -9,6 +10,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     public int instanceCount = 50000;
     public float drawDistance = 125;
     public Material instanceMaterial;
+    public ComputeShader cullingComputeShader;
 
     //global ref to this script
     [HideInInspector]
@@ -17,28 +19,46 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     private int cachedInstanceCount = -1;
     private Mesh cachedGrassMesh;
 
-    private ComputeBuffer transformBigBuffer;
+    private ComputeBuffer allInstanceTransformBuffer;
+    private ComputeBuffer visibleInstanceOnlyTransformBuffer;
     private ComputeBuffer argsBuffer;
 
     private void Awake()
     {
         instance = this; // assign global ref using this script
     }
+
     void LateUpdate()
     {
+        // recreate all buffers in grass shader if needed
+        UpdateAllInstanceTransformBufferIfNeeded();
 
-        // Update _TransformBuffer in grass shader if needed
-        UpdateBuffersIfNeeded();
+        //dispatch culling compute, fill visible instance into visibleInstanceOnlyTransformBuffer
+        visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
+        Matrix4x4 v = Camera.main.worldToCameraMatrix;
+        Matrix4x4 p = Camera.main.projectionMatrix;
+        Matrix4x4 vp = p * v;
+        cullingComputeShader.SetMatrix("_VPMatrix", vp);
+        cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
+        cullingComputeShader.SetBuffer(0, "_AllInstancesTransformBuffer", allInstanceTransformBuffer);
+        cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformBuffer", visibleInstanceOnlyTransformBuffer);
+        cullingComputeShader.Dispatch(0, Mathf.CeilToInt(instanceCount/1024), 1, 1);
+        ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
 
         // Render     
         Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, new Bounds(transform.position, transform.localScale * 2), argsBuffer);
     }
+
     void OnDisable()
     {
         //release all compute buffers
-        if (transformBigBuffer != null)
-            transformBigBuffer.Release();
-        transformBigBuffer = null;
+        if (allInstanceTransformBuffer != null)
+            allInstanceTransformBuffer.Release();
+        allInstanceTransformBuffer = null;
+
+        if (visibleInstanceOnlyTransformBuffer != null)
+            visibleInstanceOnlyTransformBuffer.Release();
+        visibleInstanceOnlyTransformBuffer = null;
 
         if (argsBuffer != null)
             argsBuffer.Release();
@@ -79,17 +99,17 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         return cachedGrassMesh;
     }
 
-    void UpdateBuffersIfNeeded()
+    void UpdateAllInstanceTransformBufferIfNeeded()
     {
         //always update
         instanceMaterial.SetVector("_PivotPosWS", transform.position);
         instanceMaterial.SetVector("_BoundSize", new Vector2(transform.localScale.x, transform.localScale.z));
-        instanceMaterial.SetFloat("_DrawDistance", drawDistance);
 
         //early exit if no need update buffer
         if (cachedInstanceCount == instanceCount &&
             argsBuffer != null &&
-            transformBigBuffer != null)
+            allInstanceTransformBuffer != null &&
+            visibleInstanceOnlyTransformBuffer != null)
             {
                 return;
             }
@@ -100,34 +120,43 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         ///////////////////////////
         // Transform buffer
         ///////////////////////////
-        if (transformBigBuffer != null)
-            transformBigBuffer.Release();
-        Vector4[] positions = new Vector4[instanceCount];
-        transformBigBuffer = new ComputeBuffer(positions.Length, sizeof(float)*4); //float4 per grass
+        if (allInstanceTransformBuffer != null)
+            allInstanceTransformBuffer.Release();
+        allInstanceTransformBuffer = new ComputeBuffer(instanceCount, sizeof(float)*4); //float4 per grass
+
+        if (visibleInstanceOnlyTransformBuffer != null)
+            visibleInstanceOnlyTransformBuffer.Release();
+        visibleInstanceOnlyTransformBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 4, ComputeBufferType.Append);
 
         //keep grass visual the same
-        Random.InitState(123);
+        UnityEngine.Random.InitState(123);
 
         //spawn grass inside gizmo cube 
+        Vector4[] positions = new Vector4[instanceCount];
         for (int i = 0; i < instanceCount; i++)
         {
             Vector3 pos = Vector3.zero;
 
             //local pos (can define any local pos here, random is just an example)
-            pos.x = Random.Range(-1f, 1f);
-            pos.z = Random.Range(-1f, 1f);
+            pos.x = UnityEngine.Random.Range(-1f, 1f);
+            pos.z = UnityEngine.Random.Range(-1f, 1f);
+
+            //transform to posWS in C#
+            pos.x *= transform.lossyScale.x;
+            pos.z *= transform.lossyScale.z;
+            pos += transform.position;
 
             //local rotate
-            //TODO: allow this gameobject's rotation affect grass, make sure to update bending grass's imaginary camera rotation also
+            //TODO: allow this gameobject's rotation affect grass, make sure to update bending grass's 0x camera rotation also
 
             //world scale
-            float size = Random.Range(2f, 5f);
+            float size = UnityEngine.Random.Range(2f, 5f);
 
             positions[i] = new Vector4(pos.x,pos.y,pos.z, size);
         }
 
-        transformBigBuffer.SetData(positions);
-        instanceMaterial.SetBuffer("_TransformBuffer", transformBigBuffer);
+        allInstanceTransformBuffer.SetData(positions);
+        instanceMaterial.SetBuffer("_TransformBuffer", visibleInstanceOnlyTransformBuffer);
 
         ///////////////////////////
         // Indirect args buffer

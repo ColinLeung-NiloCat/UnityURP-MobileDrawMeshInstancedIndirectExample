@@ -2726,6 +2726,8 @@ MonoBehaviour:
   instanceCount: 50000
   drawDistance: 125
   instanceMaterial: {fileID: 2100000, guid: 2a0ca5d9e755e74448eaac7a643303db, type: 2}
+  cullingComputeShader: {fileID: 7200000, guid: 4ff257ce2a1c37546a9b544e669e976b,
+    type: 3}
 --- !u!4 &1709084318
 Transform:
   m_ObjectHideFlags: 0
