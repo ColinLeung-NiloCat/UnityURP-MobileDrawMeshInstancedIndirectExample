@@ -108,7 +108,8 @@
 
                 half _RandomNormal;
 
-                StructuredBuffer<float4> _TransformBuffer;
+                StructuredBuffer<float3> _AllInstancesTransformBuffer;
+                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
             CBUFFER_END
 
             sampler2D _GrassBendingRT;
@@ -140,13 +141,9 @@
             {
                 Varyings OUT;
 
-                //bufferData.xyz    is posWS inside ComputeBuffer
-                //bufferData.w      is scaleWS inside ComputeBuffer
-                float4 bufferData = _TransformBuffer[instanceID];
-                float3 perGrassPivotPosWS = bufferData.xyz;//we transform to posWS in C# now
-                float seed01 = bufferData.w;
-                float seedNegative1ToPositive1 = seed01 * 2 - 1;
-                float perGrassHeight = lerp(2,5,seed01) * _GrassHeight;
+                float3 perGrassPivotPosWS = _AllInstancesTransformBuffer[_VisibleInstanceOnlyTransformIDBuffer[instanceID]];//we pre-transform to posWS in C# now
+
+                float perGrassHeight = lerp(2,5,(sin(perGrassPivotPosWS.x*23.4643 + perGrassPivotPosWS.z) * 0.45 + 0.55)) * _GrassHeight;
 
                 //get "is grass stepped" data(bending) from RT
                 float2 grassBendingUV = ((perGrassPivotPosWS.xz - _PivotPosWS.xz) / _BoundSize) * 0.5 + 0.5;//claculate where is this grass inside bound (can optimize to 2 MAD)
@@ -159,7 +156,7 @@
                 float3 cameraTransformForwardWS = -UNITY_MATRIX_V[2].xyz;//UNITY_MATRIX_V[2].xyz == -1 * world space camera Forward unit vector
 
                 //Expand Billboard (billboard Left+right)
-                float3 positionOS = IN.positionOS.x * cameraTransformRightWS * _GrassWidth;
+                float3 positionOS = IN.positionOS.x * cameraTransformRightWS * _GrassWidth * (sin(perGrassPivotPosWS.x*95.4643 + perGrassPivotPosWS.z) * 0.45 + 0.55);//random width from posXZ, min 0.1
 
                 //Expand Billboard (billboard Up)
                 positionOS += IN.positionOS.y * cameraTransformUpWS;         
@@ -206,7 +203,7 @@
 #else
                 mainLight = GetMainLight();
 #endif
-                half3 randomAddToN = (_RandomNormal* seedNegative1ToPositive1 + wind * -0.25) * cameraTransformRightWS;//random normal per grass 
+                half3 randomAddToN = (_RandomNormal* sin(perGrassPivotPosWS.x * 82.32523 + perGrassPivotPosWS.z) + wind * -0.25) * cameraTransformRightWS;//random normal per grass 
                 //default grass's normal is pointing 100% upward in world space, it is an important but simple grass normal trick
                 //-apply random to normal else lighting is too uniform
                 //-apply cameraTransformForwardWS to normal because grass is billboard

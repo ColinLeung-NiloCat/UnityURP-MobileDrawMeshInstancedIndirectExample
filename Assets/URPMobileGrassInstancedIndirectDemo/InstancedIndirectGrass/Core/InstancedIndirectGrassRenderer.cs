@@ -41,7 +41,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         cullingComputeShader.SetMatrix("_VPMatrix", vp);
         cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
         cullingComputeShader.SetBuffer(0, "_AllInstancesTransformBuffer", allInstanceTransformBuffer);
-        cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformBuffer", visibleInstanceOnlyTransformBuffer);
+        cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
         cullingComputeShader.Dispatch(0, Mathf.CeilToInt(instanceCount/1024), 1, 1);
         ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
 
@@ -122,37 +122,41 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         ///////////////////////////
         if (allInstanceTransformBuffer != null)
             allInstanceTransformBuffer.Release();
-        allInstanceTransformBuffer = new ComputeBuffer(instanceCount, sizeof(float)*4); //float4 per grass
+        allInstanceTransformBuffer = new ComputeBuffer(instanceCount, sizeof(float)*3); //float3 posWS only, per grass
 
         if (visibleInstanceOnlyTransformBuffer != null)
             visibleInstanceOnlyTransformBuffer.Release();
-        visibleInstanceOnlyTransformBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 4, ComputeBufferType.Append);
+        visibleInstanceOnlyTransformBuffer = new ComputeBuffer(instanceCount, sizeof(uint), ComputeBufferType.Append); //uint only, per visible grass
 
         //keep grass visual the same
         UnityEngine.Random.InitState(123);
 
         //spawn grass inside gizmo cube 
-        Vector4[] positions = new Vector4[instanceCount];
+        Vector3[] positions = new Vector3[instanceCount];
         for (int i = 0; i < instanceCount; i++)
         {
             Vector3 pos = Vector3.zero;
 
-            //local pos (can define any local pos here, random is just an example)
+            //can define any posWS in this section, random is just an example
+            //TODO: allow API call to set posWS
+            //===================================================
+            //local pos
             pos.x = UnityEngine.Random.Range(-1f, 1f);
+            pos.y = 0;
             pos.z = UnityEngine.Random.Range(-1f, 1f);
 
             //transform to posWS in C#
             pos.x *= transform.lossyScale.x;
             pos.z *= transform.lossyScale.z;
             pos += transform.position;
+            //===================================================
 
-            float seed = UnityEngine.Random.Range(0f, 1f);
-
-            positions[i] = new Vector4(pos.x,pos.y,pos.z, seed);
+            positions[i] = new Vector3(pos.x,pos.y,pos.z);
         }
 
         allInstanceTransformBuffer.SetData(positions);
-        instanceMaterial.SetBuffer("_TransformBuffer", visibleInstanceOnlyTransformBuffer);
+        instanceMaterial.SetBuffer("_AllInstancesTransformBuffer", allInstanceTransformBuffer);
+        instanceMaterial.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
 
         ///////////////////////////
         // Indirect args buffer
