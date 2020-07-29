@@ -41,6 +41,7 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
 reference
 -------------------
 - https://github.com/ellioman/Indirect-Rendering-With-Compute-Shaders
+- https://github.com/tiiago11/Unity-InstancedIndirectExamples
 - https://assetstore.unity.com/packages/tools/utilities/gpu-instancer-117566
 - https://assetstore.unity.com/packages/tools/terrain/advanced-terrain-grass-100014
 
