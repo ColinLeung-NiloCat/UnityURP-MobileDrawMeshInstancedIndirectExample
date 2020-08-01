@@ -52,6 +52,16 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         //=====================================================================================================
         visibleCellIDList.Clear();//fill in this cell ID list using CPU frustum culling first
         Camera cam = Camera.main;
+
+        //Do frustum culling using per cell bound
+        //https://docs.unity3d.com/ScriptReference/GeometryUtility.CalculateFrustumPlanes.html
+        //https://docs.unity3d.com/ScriptReference/GeometryUtility.TestPlanesAABB.html
+        float cameraOriginalFarPlane = cam.farClipPlane;
+        cam.farClipPlane = drawDistance;//allow drawDistance control    
+        GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlanes);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
+        cam.farClipPlane = cameraOriginalFarPlane;//revert far plane edit
+
+        //TODO: replace this forloop to a quadtree?
         for (int i = 0; i < cellPosWSsList.Length; i++)
         {
             //create cell bound
@@ -61,13 +71,6 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             Vector3 sizeWS = new Vector3(Mathf.Abs(maxX - minX) / cellCountX,0,Mathf.Abs(maxX - minX) / cellCountX);
             Bounds cellBound = new Bounds(centerPosWS, sizeWS);
 
-            //Do frustum culling using the above bound
-            //https://docs.unity3d.com/ScriptReference/GeometryUtility.CalculateFrustumPlanes.html
-            //https://docs.unity3d.com/ScriptReference/GeometryUtility.TestPlanesAABB.html
-            float cameraOriginalFarPlane = cam.farClipPlane;
-            cam.farClipPlane = drawDistance;//allow drawDistance control    
-            GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlanes);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
-            cam.farClipPlane = cameraOriginalFarPlane;//revert
             if (GeometryUtility.TestPlanesAABB(cameraFrustumPlanes, cellBound))
             {
                 visibleCellIDList.Add(i);
@@ -104,12 +107,12 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         //====================================================================================
         // Final 1 big DrawMeshInstancedIndirect draw call 
         //====================================================================================
-        // GPU per instance culling finished, copy count to argsBuffer to setup DrawMeshInstancedIndirect's draw amount 
+        // GPU per instance culling finished, copy visible count to argsBuffer, to setup DrawMeshInstancedIndirect's draw amount 
         ComputeBuffer.CopyCount(visibleInstancesOnlyPosWSIDBuffer, argsBuffer, 4);
 
         // Render 1 big drawcall using DrawMeshInstancedIndirect    
         Bounds renderBound = new Bounds();
-        renderBound.SetMinMax(new Vector3(minX, 0, minZ), new Vector3(maxX, 0, maxZ));//if camera frustum is outside this bound, DrawMeshInstancedIndirect will not even trigger
+        renderBound.SetMinMax(new Vector3(minX, 0, minZ), new Vector3(maxX, 0, maxZ));//if camera frustum is not overlapping this bound, DrawMeshInstancedIndirect will not even render
         Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, renderBound, argsBuffer);
     }
 
