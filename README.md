@@ -1,7 +1,7 @@
 # UnityURP-MobileDrawMeshInstancedIndirectExample
 
-youtube: https://youtu.be/Y7wAwMn4i2M  
-download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_/view
+youtube runtime demo video: https://youtu.be/Y7wAwMn4i2M  
+download .apk, try it on your android phone: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_/view
 
  DrawMeshInstancedIndirect ON
  ![screenshot](https://i.imgur.com/DDPbFhQ.png)
@@ -14,15 +14,16 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  
  Why create this project?
  -------------
- To demonstrate the only API that can draw millions of instance -> DrawMeshInstancedIndirect, running on mobile devices.
+ To demonstrate an API that can draw millions of instance -> DrawMeshInstancedIndirect(), running on mobile devices.
  
- How fast is DrawMeshInstancedIndirect API?
+ Can this demo runs on midrange mobile?
 ---------------
 - can handle 10 million instances on Samsung Galaxy A70 (GPU = adreno612, not a strong GPU), 50~60fps, performance mainly affected by visible grass count on screen(draw distance)
  
  Requirement
  -----------------
  if you want to try the pre-built .apk, your android device must support Opengles3.2 / Vulkan
+ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_/view
  
  Editor
  ------------
@@ -31,7 +32,7 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  Note
  -------------
  This is a simplified example project to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
- This project is as simple as possible, only contains a simple CPU cell frustum culling(not even a quadtree) -> minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else.
+ This project is as simple as possible, only contains a simple CPU cell frustum culling(not even a quadtree) -> minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else, code is very short.
  
  Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader's lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
  
