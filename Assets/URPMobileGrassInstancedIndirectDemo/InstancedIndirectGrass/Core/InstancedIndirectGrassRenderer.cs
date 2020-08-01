@@ -32,6 +32,8 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     List<Vector3>[] cells; //for binning: put each posWS into correct cell
     float minX, minZ, maxX, maxZ;
+    List<int> visibleCellIDList = new List<int>();
+
     //=====================================================
 
     private void OnEnable()
@@ -46,7 +48,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
         // big cell frustum culling in CPU first
         //====================================================================================
-        List<int> visibleCellIDList = new List<int>();
+        visibleCellIDList.Clear();//fill in this cell ID list using CPU frustum culling
         for (int i = 0; i < cells.Length; i++)
         {
             //create cell bound
@@ -73,7 +75,6 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         // then loop though only visible cells, each visible cell dispatch GPU culling job once
         // will fill all visible instance into visibleInstancesOnlyPosWSIDBuffer
         //====================================================================================
-        Debug.Log($"after CPU cell Culling - visible cell count = {visibleCellIDList.Count}/{cellCountX*cellCountZ}");
 
         Matrix4x4 v = Camera.main.worldToCameraMatrix;
         Matrix4x4 p = Camera.main.projectionMatrix;
@@ -108,6 +109,11 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         Bounds renderBound = new Bounds();
         renderBound.SetMinMax(new Vector3(minX, 0, minZ), new Vector3(maxX, 0, maxZ));//if camera out of this bound, DrawMeshInstancedIndirect will not trigger
         Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, renderBound, argsBuffer);
+    }
+
+    private void OnGUI()
+    {
+        GUI.Label(new Rect(200, 10, 200, 40), $"after CPU cell Culling, visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}");
     }
 
     void OnDisable()
