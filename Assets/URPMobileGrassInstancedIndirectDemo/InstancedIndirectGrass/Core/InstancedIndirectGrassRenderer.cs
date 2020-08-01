@@ -92,6 +92,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
 
         //dispatch per visible cell
+        //TODO: we can batch n dispatchs into 1, per line horizontally
         for (int i = 0; i < visibleCellIDList.Count; i++)
         {
             int targetCellFlattenID = visibleCellIDList[i];
