@@ -8,18 +8,17 @@ using UnityEngine;
 public class InstancedIndirectGrassRenderer : MonoBehaviour
 {
     [Header("Settings")]
-    public float drawDistance = 125;
+    public float drawDistance = 125;//this setting will affect performance a lot!
     public Material instanceMaterial;
-
 
     [Header("Internal")]
     public ComputeShader cullingComputeShader;
 
+    [NonSerialized]
+    public List<Vector3> allGrassPos = new List<Vector3>();//user should update this list using C#
     //=====================================================
     [HideInInspector]   
     public static InstancedIndirectGrassRenderer instance;// global ref to this script
-    [NonSerialized]
-    public List<Vector3> allGrassPos = new List<Vector3>();//user should update this list
 
     private int cellCountX = -1;
     private int cellCountZ = -1;
@@ -34,6 +33,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     private List<Vector3>[] cellPosWSsList; //for binning: binning will put each posWS into correct cell
     private float minX, minZ, maxX, maxZ;
     private List<int> visibleCellIDList = new List<int>();
+    private Plane[] cameraFrustumPlanes = new Plane[6];
 
     //=====================================================
 
@@ -47,9 +47,11 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         // recreate all buffers if needed
         UpdateAllInstanceTransformBufferIfNeeded();
 
-        // big cell frustum culling in CPU first
-        //====================================================================================
-        visibleCellIDList.Clear();//fill in this cell ID list using CPU frustum culling
+        //=====================================================================================================
+        // rough quick big cell frustum culling in CPU first
+        //=====================================================================================================
+        visibleCellIDList.Clear();//fill in this cell ID list using CPU frustum culling first
+        Camera cam = Camera.main;
         for (int i = 0; i < cellPosWSsList.Length; i++)
         {
             //create cell bound
@@ -62,23 +64,22 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             //Do frustum culling using the above bound
             //https://docs.unity3d.com/ScriptReference/GeometryUtility.CalculateFrustumPlanes.html
             //https://docs.unity3d.com/ScriptReference/GeometryUtility.TestPlanesAABB.html
-            float cameraOriginalFarPlane = Camera.main.farClipPlane;
-            Camera.main.farClipPlane = drawDistance;//allow drawDistance control    
-            Plane[] planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
-            Camera.main.farClipPlane = cameraOriginalFarPlane;//revert
-            if (GeometryUtility.TestPlanesAABB(planes, cellBound))
+            float cameraOriginalFarPlane = cam.farClipPlane;
+            cam.farClipPlane = drawDistance;//allow drawDistance control    
+            GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlanes);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
+            cam.farClipPlane = cameraOriginalFarPlane;//revert
+            if (GeometryUtility.TestPlanesAABB(cameraFrustumPlanes, cellBound))
             {
                 visibleCellIDList.Add(i);
-                continue;
             }
         }
 
+        //=====================================================================================================
         // then loop though only visible cells, each visible cell dispatch GPU culling job once
-        // will fill all visible instance into visibleInstancesOnlyPosWSIDBuffer
-        //====================================================================================
-
-        Matrix4x4 v = Camera.main.worldToCameraMatrix;
-        Matrix4x4 p = Camera.main.projectionMatrix;
+        // at the end compute shader will fill all visible instance into visibleInstancesOnlyPosWSIDBuffer
+        //=====================================================================================================
+        Matrix4x4 v = cam.worldToCameraMatrix;
+        Matrix4x4 p = cam.projectionMatrix;
         Matrix4x4 vp = p * v;
 
         visibleInstancesOnlyPosWSIDBuffer.SetCounterValue(0);
@@ -86,35 +87,35 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         //set once only
         cullingComputeShader.SetMatrix("_VPMatrix", vp);
         cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
-        cullingComputeShader.SetBuffer(0, "_AllInstancesPosWSBuffer", allInstancesPosWSBuffer);
-        cullingComputeShader.SetBuffer(0, "_VisibleInstancesOnlyPosWSIDBuffer", visibleInstancesOnlyPosWSIDBuffer);
-        //set per cell
+
+        //dispatch per visible cell
         for (int i = 0; i < visibleCellIDList.Count; i++)
         {
-            int targetID = visibleCellIDList[i];
-            int offset = 0;
-            for (int j = 0; j < targetID; j++)
+            int targetCellFlattenID = visibleCellIDList[i];
+            int memoryOffset = 0;
+            for (int j = 0; j < targetCellFlattenID; j++)
             {
-                offset += cellPosWSsList[j].Count;
+                memoryOffset += cellPosWSsList[j].Count;
             }
-            cullingComputeShader.SetInt("_StartOffset", offset); //culling start getting data at offseted pos, will start from cell's total offset in memory
-            cullingComputeShader.Dispatch(0, Mathf.CeilToInt(cellPosWSsList[targetID].Count / 64f), 1, 1); //disaptch.X must match in shader
+            cullingComputeShader.SetInt("_StartOffset", memoryOffset); //culling read data started at offseted pos, will start from cell's total offset in memory
+            cullingComputeShader.Dispatch(0, Mathf.CeilToInt(cellPosWSsList[targetCellFlattenID].Count / 64f), 1, 1); //disaptch.X division number must match in shader (e.g. 64)
         }
 
         //====================================================================================
-
-        // GPU culling finished, copy count to prepare DrawMeshInstancedIndirect draw amount 
+        // Final 1 big DrawMeshInstancedIndirect draw call 
+        //====================================================================================
+        // GPU per instance culling finished, copy count to argsBuffer to setup DrawMeshInstancedIndirect's draw amount 
         ComputeBuffer.CopyCount(visibleInstancesOnlyPosWSIDBuffer, argsBuffer, 4);
 
-        // Render     
+        // Render 1 big drawcall using DrawMeshInstancedIndirect    
         Bounds renderBound = new Bounds();
-        renderBound.SetMinMax(new Vector3(minX, 0, minZ), new Vector3(maxX, 0, maxZ));//if camera out of this bound, DrawMeshInstancedIndirect will not trigger
+        renderBound.SetMinMax(new Vector3(minX, 0, minZ), new Vector3(maxX, 0, maxZ));//if camera frustum is outside this bound, DrawMeshInstancedIndirect will not even trigger
         Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, renderBound, argsBuffer);
     }
 
     private void OnGUI()
     {
-        GUI.Label(new Rect(200, 10, 200, 40), $"after CPU cell frustum culling, visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}");
+        GUI.Label(new Rect(200, 10, 200, 40), $"After CPU cell frustum culling, visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}");
     }
 
     void OnDisable()
@@ -263,5 +264,10 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         ///////////////////////////
         //update cache to prevent future no-op buffer update, which waste performance
         instanceCountCache = allGrassPos.Count;
+
+
+        //set buffer
+        cullingComputeShader.SetBuffer(0, "_AllInstancesPosWSBuffer", allInstancesPosWSBuffer);
+        cullingComputeShader.SetBuffer(0, "_VisibleInstancesOnlyPosWSIDBuffer", visibleInstancesOnlyPosWSIDBuffer);
     }
 }
