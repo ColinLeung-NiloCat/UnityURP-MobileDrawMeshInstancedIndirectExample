@@ -5,14 +5,15 @@
 //cullingComputeShader.SetMatrix("_VPMatrix", p * v); //set from C#
 float4x4 _VPMatrix;
 float _MaxDrawDistance;
-StructuredBuffer<float3> _AllInstancesTransformBuffer; //will not change until instance count change
-AppendStructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer; //will set counter to 0 per frame, then fill in by this compute shader
+uint _StartOffset;
+StructuredBuffer<float3> _AllInstancesPosWSBuffer; //will not change until instance count change
+AppendStructuredBuffer<uint> _VisibleInstancesOnlyPosWSIDBuffer; //will set counter to 0 per frame, then fill in by this compute shader
 
-[numthreads(1024,1,1)]
+[numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
 	//posWS -> posCS
-	float4 absPosCS = abs(mul(_VPMatrix,float4(_AllInstancesTransformBuffer[id.x],1.0)));
+	float4 absPosCS = abs(mul(_VPMatrix,float4(_AllInstancesPosWSBuffer[id.x + _StartOffset],1.0)));
 
 	//do culling test in clip space, result is the same as doing test in NDC space.
 	//prefer clip space here because doing culling test in clip space is faster than doing culling test in NDC, because we can skip 1 division.
@@ -21,5 +22,5 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 	//y test allow 50% more threshold (hardcode for grass)
 	//x test allow 10% more threshold (hardcode for grass)
     if (absPosCS.z <= absPosCS.w && absPosCS.y <= absPosCS.w*1.5 && absPosCS.x <= absPosCS.w*1.1 && absPosCS.w <= _MaxDrawDistance)
-    	_VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
+		_VisibleInstancesOnlyPosWSIDBuffer.Append(id.x + _StartOffset);
 }

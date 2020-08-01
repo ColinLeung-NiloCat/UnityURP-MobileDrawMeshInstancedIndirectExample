@@ -2704,6 +2704,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1709084318}
   - component: {fileID: 1709084317}
+  - component: {fileID: 1709084319}
   m_Layer: 0
   m_Name: InstancedIndirectGrass
   m_TagString: Untagged
@@ -2723,7 +2724,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ed67b81fb4b64d498a58bbb1c32d63d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instanceCount: 50000
   drawDistance: 125
   instanceMaterial: {fileID: 2100000, guid: 2a0ca5d9e755e74448eaac7a643303db, type: 2}
   cullingComputeShader: {fileID: 7200000, guid: 4ff257ce2a1c37546a9b544e669e976b,
@@ -2742,6 +2742,20 @@ Transform:
   m_Father: {fileID: 652083985}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1709084319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709084316}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9d6ee35f46cc6a449199c3d64518325, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  instanceCount: 1000000
+  drawDistance: 125
 --- !u!1 &1721825726
 GameObject:
   m_ObjectHideFlags: 0

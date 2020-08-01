@@ -1,29 +1,40 @@
 ﻿//see this for ref: https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstancedIndirect.html
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
-[ExecuteAlways]
+//[ExecuteAlways]
 public class InstancedIndirectGrassRenderer : MonoBehaviour
 {
-    [Range(1,1000000)]
-    public int instanceCount = 50000;
+    [Header("Settings")]
     public float drawDistance = 125;
     public Material instanceMaterial;
+    private int cellCountX = 11; //temp!
+    private int cellCountZ = 11; //temp!
+
+    [Header("Internal")]
     public ComputeShader cullingComputeShader;
 
-    //global ref to this script
-    [HideInInspector]
-    public static InstancedIndirectGrassRenderer instance;
+    //=====================================================
+    [HideInInspector]   
+    public static InstancedIndirectGrassRenderer instance;// global ref to this script
+    [NonSerialized]
+    public List<Vector3> allGrassPos = new List<Vector3>();
 
     private int cachedInstanceCount = -1;
     private Mesh cachedGrassMesh;
 
-    private ComputeBuffer allInstanceTransformBuffer;
-    private ComputeBuffer visibleInstanceOnlyTransformBuffer;
+    private ComputeBuffer allInstancesPosWSBuffer;
+    private ComputeBuffer visibleInstancesOnlyPosWSIDBuffer;
     private ComputeBuffer argsBuffer;
 
-    private void Awake()
+    List<Vector3>[] cells; //for binning: put each posWS into correct cell
+    float minX, minZ, maxX, maxZ;
+    //=====================================================
+
+    private void OnEnable()
     {
         instance = this; // assign global ref using this script
     }
@@ -33,48 +44,88 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         // recreate all buffers in grass shader if needed
         UpdateAllInstanceTransformBufferIfNeeded();
 
-        //dispatch culling compute, fill visible instance into visibleInstanceOnlyTransformBuffer
-        visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
+        // big cell frustum culling in CPU first
+        //====================================================================================
+        List<int> visibleCellIDList = new List<int>();
+        for (int i = 0; i < cells.Length; i++)
+        {
+            //create cell bound
+            Vector3 centerPosWS = new Vector3 (i % cellCountX + 0.5f, 0, i / cellCountX + 0.5f);
+            centerPosWS.x = Mathf.Lerp(minX, maxX, centerPosWS.x / cellCountX);
+            centerPosWS.z = Mathf.Lerp(minZ, maxZ, centerPosWS.z / cellCountZ);
+            Vector3 sizeWS = new Vector3(Mathf.Abs(maxX - minX) / cellCountX,0,Mathf.Abs(maxX - minX) / cellCountX);
+            Bounds cellBound = new Bounds(centerPosWS, sizeWS);
+
+            //Do frustum culling using the above bound
+            //https://docs.unity3d.com/ScriptReference/GeometryUtility.CalculateFrustumPlanes.html
+            //https://docs.unity3d.com/ScriptReference/GeometryUtility.TestPlanesAABB.html
+            float cameraOriginalFarPlane = Camera.main.farClipPlane;
+            Camera.main.farClipPlane = drawDistance;//allow drawDistance control    
+            Plane[] planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
+            Camera.main.farClipPlane = cameraOriginalFarPlane;//revert
+            if (GeometryUtility.TestPlanesAABB(planes, cellBound))
+            {
+                visibleCellIDList.Add(i);
+                continue;
+            }
+        }
+
+        // then loop though only visible cells, each visible cell dispatch GPU culling job once
+        // will fill all visible instance into visibleInstancesOnlyPosWSIDBuffer
+        //====================================================================================
+        Debug.Log($"after CPU cell Culling - visible cell count = {visibleCellIDList.Count}/{cellCountX*cellCountZ}");
+
         Matrix4x4 v = Camera.main.worldToCameraMatrix;
         Matrix4x4 p = Camera.main.projectionMatrix;
         Matrix4x4 vp = p * v;
+
+        visibleInstancesOnlyPosWSIDBuffer.SetCounterValue(0);
+
+        //set once only
         cullingComputeShader.SetMatrix("_VPMatrix", vp);
         cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
-        cullingComputeShader.SetBuffer(0, "_AllInstancesTransformBuffer", allInstanceTransformBuffer);
-        cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
-        cullingComputeShader.Dispatch(0, Mathf.CeilToInt(instanceCount/1024f), 1, 1);
-        ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
+        cullingComputeShader.SetBuffer(0, "_AllInstancesPosWSBuffer", allInstancesPosWSBuffer);
+        cullingComputeShader.SetBuffer(0, "_VisibleInstancesOnlyPosWSIDBuffer", visibleInstancesOnlyPosWSIDBuffer);
+        //set per cell
+        for (int i = 0; i < visibleCellIDList.Count; i++)
+        {
+            int targetID = visibleCellIDList[i];
+            int offset = 0;
+            for (int j = 0; j < targetID; j++)
+            {
+                offset += cells[j].Count;
+            }
+            cullingComputeShader.SetInt("_StartOffset", offset); //culling start getting data at offseted pos, will start from cell's total offset in memory
+            cullingComputeShader.Dispatch(0, Mathf.CeilToInt(cells[targetID].Count / 64f), 1, 1); //disaptch.X must match in shader
+        }
+
+        //====================================================================================
+
+        // GPU culling finished, copy count to prepare DrawMeshInstancedIndirect draw amount 
+        ComputeBuffer.CopyCount(visibleInstancesOnlyPosWSIDBuffer, argsBuffer, 4);
 
         // Render     
-        Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, new Bounds(transform.position, transform.localScale * 2), argsBuffer);
+        Bounds renderBound = new Bounds();
+        renderBound.SetMinMax(new Vector3(minX, 0, minZ), new Vector3(maxX, 0, maxZ));//if camera out of this bound, DrawMeshInstancedIndirect will not trigger
+        Graphics.DrawMeshInstancedIndirect(GetGrassMeshCache(), 0, instanceMaterial, renderBound, argsBuffer);
     }
 
     void OnDisable()
     {
         //release all compute buffers
-        if (allInstanceTransformBuffer != null)
-            allInstanceTransformBuffer.Release();
-        allInstanceTransformBuffer = null;
+        if (allInstancesPosWSBuffer != null)
+            allInstancesPosWSBuffer.Release();
+        allInstancesPosWSBuffer = null;
 
-        if (visibleInstanceOnlyTransformBuffer != null)
-            visibleInstanceOnlyTransformBuffer.Release();
-        visibleInstanceOnlyTransformBuffer = null;
+        if (visibleInstancesOnlyPosWSIDBuffer != null)
+            visibleInstancesOnlyPosWSIDBuffer.Release();
+        visibleInstancesOnlyPosWSIDBuffer = null;
 
         if (argsBuffer != null)
             argsBuffer.Release();
         argsBuffer = null;
-    }
 
-    void OnGUI()
-    {
-        GUI.Label(new Rect(300, 50, 200, 30), "Instance Count: " + instanceCount.ToString());
-        instanceCount = Mathf.Max(1,(int)(GUI.HorizontalSlider(new Rect(300, 100, 200, 30), instanceCount / 10000f, 0, 100)) *10000);
-
-        float scale = Mathf.Sqrt((instanceCount / 4)) / 2f;
-        transform.localScale = new Vector3(scale, transform.localScale.y, scale);
-
-        GUI.Label(new Rect(300, 150, 200, 30), "Draw Distance: " + drawDistance);
-        drawDistance = Mathf.Max(1, (int)(GUI.HorizontalSlider(new Rect(300, 200, 200, 30), drawDistance/ 25f, 1, 8))*25);
+        instance = null;
     }
 
     Mesh GetGrassMeshCache()
@@ -84,12 +135,12 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             //if not exist, create a 3 vertices hardcode triangle grass mesh
             cachedGrassMesh = new Mesh();
 
-            //first grass (vertices)
+            //single grass (vertices)
             Vector3[] verts = new Vector3[3];
             verts[0] = new Vector3(-0.25f, 0);
             verts[1] = new Vector3(+0.25f, 0);
             verts[2] = new Vector3(-0.0f, 1);
-            //first grass (Triangles index)
+            //single grass (Triangle index)
             int[] trinagles = new int[3] { 2, 1, 0, }; //order to fit Cull Back in grass shader
 
             cachedGrassMesh.SetVertices(verts);
@@ -105,11 +156,11 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         instanceMaterial.SetVector("_PivotPosWS", transform.position);
         instanceMaterial.SetVector("_BoundSize", new Vector2(transform.localScale.x, transform.localScale.z));
 
-        //early exit if no need update buffer
-        if (cachedInstanceCount == instanceCount &&
+        //early exit if no need to update buffer
+        if (cachedInstanceCount == allGrassPos.Count &&
             argsBuffer != null &&
-            allInstanceTransformBuffer != null &&
-            visibleInstanceOnlyTransformBuffer != null)
+            allInstancesPosWSBuffer != null &&
+            visibleInstancesOnlyPosWSIDBuffer != null)
             {
                 return;
             }
@@ -117,46 +168,67 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         /////////////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        Debug.Log("UpdateAllInstanceTransformBuffer (Slow)");
+
         ///////////////////////////
-        // Transform buffer
+        // allInstancesPosWSBuffer buffer
         ///////////////////////////
-        if (allInstanceTransformBuffer != null)
-            allInstanceTransformBuffer.Release();
-        allInstanceTransformBuffer = new ComputeBuffer(instanceCount, sizeof(float)*3); //float3 posWS only, per grass
+        if (allInstancesPosWSBuffer != null)
+            allInstancesPosWSBuffer.Release();
+        allInstancesPosWSBuffer = new ComputeBuffer(allGrassPos.Count, sizeof(float)*3); //float3 posWS only, per grass
 
-        if (visibleInstanceOnlyTransformBuffer != null)
-            visibleInstanceOnlyTransformBuffer.Release();
-        visibleInstanceOnlyTransformBuffer = new ComputeBuffer(instanceCount, sizeof(uint), ComputeBufferType.Append); //uint only, per visible grass
+        if (visibleInstancesOnlyPosWSIDBuffer != null)
+            visibleInstancesOnlyPosWSIDBuffer.Release();
+        visibleInstancesOnlyPosWSIDBuffer = new ComputeBuffer(allGrassPos.Count, sizeof(uint), ComputeBufferType.Append); //uint only, per visible grass
 
-        //keep grass visual the same
-        UnityEngine.Random.InitState(123);
-
-        //spawn grass inside gizmo cube 
-        Vector3[] positions = new Vector3[instanceCount];
-        for (int i = 0; i < instanceCount; i++)
+        //find all instances's posWS XZ bound min max
+        minX = float.MaxValue;
+        minZ = float.MaxValue;
+        maxX = float.MinValue;
+        maxZ = float.MinValue;
+        for (int i = 0; i < allGrassPos.Count; i++)
         {
-            Vector3 pos = Vector3.zero;
-
-            //can define any posWS in this section, random is just an example
-            //TODO: allow API call to set posWS
-            //===================================================
-            //local pos
-            pos.x = UnityEngine.Random.Range(-1f, 1f);
-            pos.y = 0;
-            pos.z = UnityEngine.Random.Range(-1f, 1f);
-
-            //transform to posWS in C#
-            pos.x *= transform.lossyScale.x;
-            pos.z *= transform.lossyScale.z;
-            pos += transform.position;
-            //===================================================
-
-            positions[i] = new Vector3(pos.x,pos.y,pos.z);
+            Vector3 target = allGrassPos[i];
+            minX = Mathf.Min(target.x, minX);
+            minZ = Mathf.Min(target.z, minZ);
+            maxX = Mathf.Max(target.x, maxX);
+            maxZ = Mathf.Max(target.z, maxZ);
         }
 
-        allInstanceTransformBuffer.SetData(positions);
-        instanceMaterial.SetBuffer("_AllInstancesTransformBuffer", allInstanceTransformBuffer);
-        instanceMaterial.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
+        //init per cell posWS list memory
+        cells = new List<Vector3>[cellCountX * cellCountZ]; //flatten 2D array
+        for (int i = 0; i < cells.Length; i++)
+        {
+            cells[i] = new List<Vector3>();
+        }
+
+        //binning, put each posWS into the correct cell
+        for (int i = 0; i < allGrassPos.Count; i++)
+        {
+            Vector3 pos = allGrassPos[i];
+
+            //find cellID
+            int xID = Mathf.Min(cellCountX-1,Mathf.FloorToInt(Mathf.InverseLerp(minX, maxX, pos.x) * cellCountX)); //use min to force within 0~[cellCountX-1]  
+            int zID = Mathf.Min(cellCountZ-1,Mathf.FloorToInt(Mathf.InverseLerp(minZ, maxZ, pos.z) * cellCountZ)); //use min to force within 0~[cellCountZ-1]
+
+            cells[xID + zID * cellCountX].Add(pos);
+        }
+
+        //combine to a flatten array for compute buffer
+        int offset = 0;
+        Vector3[] allGrassPosWSSortedByCell = new Vector3[allGrassPos.Count];
+        for (int i = 0; i < cells.Length; i++)
+        {
+            for (int j = 0; j < cells[i].Count; j++)
+            {
+                allGrassPosWSSortedByCell[offset] = cells[i][j];
+                offset++;
+            }
+        }
+
+        allInstancesPosWSBuffer.SetData(allGrassPosWSSortedByCell);
+        instanceMaterial.SetBuffer("_AllInstancesTransformBuffer", allInstancesPosWSBuffer);
+        instanceMaterial.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstancesOnlyPosWSIDBuffer);
 
         ///////////////////////////
         // Indirect args buffer
@@ -167,14 +239,17 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
         args[0] = (uint)GetGrassMeshCache().GetIndexCount(0);
-        args[1] = (uint)instanceCount;
+        args[1] = (uint)allGrassPos.Count;
         args[2] = (uint)GetGrassMeshCache().GetIndexStart(0);
         args[3] = (uint)GetGrassMeshCache().GetBaseVertex(0);
         args[4] = 0;
 
         argsBuffer.SetData(args);
 
+        ///////////////////////////
+        // Update Cache
+        ///////////////////////////
         //update cache to prevent future no-op buffer update, which waste performance
-        cachedInstanceCount = instanceCount;
+        cachedInstanceCount = allGrassPos.Count;
     }
 }
