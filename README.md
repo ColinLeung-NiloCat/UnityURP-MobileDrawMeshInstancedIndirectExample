@@ -18,8 +18,7 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  
  How fast is DrawMeshInstancedIndirect API?
 ---------------
-- can draw 4 million instances on Samsung Galaxy A70 (GPU = adreno612, not a strong GPU), 30fps, performance mainly affected by visible grass count on screen
-- can draw 10 million instances on most of the 2018/2019 flagship mobiles (GPU = adreno630 or better), >30fps, performance mainly affected by visible grass count on screen
+- can handle 10 million instances on Samsung Galaxy A70 (GPU = adreno612, not a strong GPU), 50~60fps, performance mainly affected by visible grass count on screen(draw distance)
  
  Requirement
  -----------------
@@ -32,7 +31,7 @@ download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_
  Note
  -------------
  This is a simplified example project to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
- This project is as simple as possible, only contain a minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else.
+ This project is as simple as possible, only contains a simple CPU cell frustum culling(not even a quadtree) -> minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else.
  
  Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader's lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
  
