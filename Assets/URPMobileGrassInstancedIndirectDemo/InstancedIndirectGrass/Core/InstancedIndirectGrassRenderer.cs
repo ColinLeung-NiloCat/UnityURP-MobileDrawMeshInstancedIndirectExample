@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-//[ExecuteAlways]
+[ExecuteAlways]
 public class InstancedIndirectGrassRenderer : MonoBehaviour
 {
     [Header("Settings")]

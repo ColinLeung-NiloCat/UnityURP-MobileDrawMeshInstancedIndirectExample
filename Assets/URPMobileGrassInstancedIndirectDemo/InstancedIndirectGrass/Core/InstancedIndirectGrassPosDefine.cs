@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[ExecuteAlways]
 public class InstancedIndirectGrassPosDefine : MonoBehaviour
 {
     [Range(1, 40000000)]
