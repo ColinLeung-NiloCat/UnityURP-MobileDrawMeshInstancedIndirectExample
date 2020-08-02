@@ -36,6 +36,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     private List<int> visibleCellIDList = new List<int>();
     private Plane[] cameraFrustumPlanes = new Plane[6];
 
+    bool shouldBatchDispatch = true;
     //=====================================================
 
     private void OnEnable()
@@ -108,12 +109,16 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
             //============================================================================================
             //batch n dispatchs into 1 dispatch, if memory is continuous in allInstancesPosWSBuffer
-            while ( (i < visibleCellIDList.Count - 1) && //test this first to avoid out of bound access to visibleCellIDList
-                    (visibleCellIDList[i + 1] == visibleCellIDList[i] + 1))
+            //*but all test on mobile shows that this can not improve performance(on/off fps is the same)
+            if(shouldBatchDispatch)
             {
-                //if memory is continuous, append them together into the same dispatch call
-                jobLength += cellPosWSsList[visibleCellIDList[i + 1]].Count;
-                i++;
+                while ((i < visibleCellIDList.Count - 1) && //test this first to avoid out of bound access to visibleCellIDList
+                        (visibleCellIDList[i + 1] == visibleCellIDList[i] + 1))
+                {
+                    //if memory is continuous, append them together into the same dispatch call
+                    jobLength += cellPosWSsList[visibleCellIDList[i + 1]].Count;
+                    i++;
+                }
             }
             //============================================================================================
 
@@ -140,6 +145,8 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             $"After CPU cell frustum culling,\n" +
             $"-Visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}\n" +
             $"-Real compute dispatch count = {dispatchCount} (saved by batching = {visibleCellIDList.Count - dispatchCount})");
+
+        shouldBatchDispatch = GUI.Toggle(new Rect(400, 400, 100, 100), shouldBatchDispatch, "shouldBatchDispatch");
     }
 
     void OnDisable()
