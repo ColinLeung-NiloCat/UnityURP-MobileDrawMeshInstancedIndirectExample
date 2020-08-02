@@ -120,7 +120,6 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
             //============================================================================================
             //batch n dispatchs into 1 dispatch, if memory is continuous in allInstancesPosWSBuffer
-            //*but all test on mobile shows that this can not improve performance(on/off fps is the same)
             if(shouldBatchDispatch)
             {
                 while ((i < visibleCellIDList.Count - 1) && //test this first to avoid out of bound access to visibleCellIDList
