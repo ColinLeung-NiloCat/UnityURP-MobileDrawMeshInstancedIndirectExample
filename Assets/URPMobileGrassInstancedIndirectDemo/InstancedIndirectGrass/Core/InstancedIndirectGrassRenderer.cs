@@ -146,7 +146,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
             $"-Visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}\n" +
             $"-Real compute dispatch count = {dispatchCount} (saved by batching = {visibleCellIDList.Count - dispatchCount})");
 
-        shouldBatchDispatch = GUI.Toggle(new Rect(400, 400, 100, 100), shouldBatchDispatch, "shouldBatchDispatch");
+        shouldBatchDispatch = GUI.Toggle(new Rect(400, 400, 200, 100), shouldBatchDispatch, "shouldBatchDispatch");
     }
 
     void OnDisable()
