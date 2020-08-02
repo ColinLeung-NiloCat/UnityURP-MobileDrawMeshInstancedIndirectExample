@@ -2,7 +2,10 @@
 
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 [ExecuteAlways]
 public class InstancedIndirectGrassRenderer : MonoBehaviour
@@ -23,6 +26,10 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
     private int cellCountX = -1;
     private int cellCountZ = -1;
     private int dispatchCount = -1;
+
+    //smaller the number, CPU needs more time, but GPU is faster
+    private float cellSizeX = 10; //unity unit (m)
+    private float cellSizeZ = 10; //unity unit (m)
 
     private int instanceCountCache = -1;
     private Mesh cachedGrassMesh;
@@ -63,8 +70,11 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlanes);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
         cam.farClipPlane = cameraOriginalFarPlane;//revert far plane edit
 
-        //TODO: replace this forloop by a quadtree test?
-        //TODO: convert this forloop to job+burst?
+        //slow loop
+        //TODO: (A)replace this forloop by a quadtree test?
+        //TODO: (B)convert this forloop to job+burst? (UnityException: TestPlanesAABB can only be called from the main thread.)
+        Profiler.BeginSample("CPU cell frustum culling (heavy)");
+        
         for (int i = 0; i < cellPosWSsList.Length; i++)
         {
             //create cell bound
@@ -79,6 +89,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
                 visibleCellIDList.Add(i);
             }
         }
+        Profiler.EndSample();
 
         //=====================================================================================================
         // then loop though only visible cells, each visible cell dispatch GPU culling job once
@@ -235,9 +246,9 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         }
 
         //decide cellCountX,Z here using min max
-        //each cell is 100mx100m
-        cellCountX = Mathf.CeilToInt((maxX - minX) / 100); 
-        cellCountZ = Mathf.CeilToInt((maxZ - minZ) / 100);
+        //each cell is cellSizeX x cellSizeZ
+        cellCountX = Mathf.CeilToInt((maxX - minX) / cellSizeX); 
+        cellCountZ = Mathf.CeilToInt((maxZ - minZ) / cellSizeZ);
 
         //init per cell posWS list memory
         cellPosWSsList = new List<Vector3>[cellCountX * cellCountZ]; //flatten 2D array
