@@ -12,13 +12,14 @@ download .apk, try it on your android phone: https://drive.google.com/file/d/185
  DrawMeshInstancedIndirect OFF
  ![screenshot](https://i.imgur.com/xOhTW6d.png)
  
- Why create this project?
+ Why create this repository?
  -------------
  To demonstrate an API that can draw millions of instance -> DrawMeshInstancedIndirect(), running on mobile devices.
  
  Can this demo runs on midrange mobile?
 ---------------
-- can handle 10 million instances on Samsung Galaxy A70 (GPU = adreno612, not a strong GPU), 50~60fps, performance mainly affected by visible grass count on screen(draw distance)
+- can handle 10 million instances on Samsung Galaxy A70 (GPU = adreno612, not a strong GPU), 50~60fps, performance mainly affected by visible grass count on screen(draw distance = 125)
+- can handle 10 million instances on Lenovo S5 (GPU = adreno506, a weak GPU), 30fps, performance mainly affected by visible grass count on screen(draw distance = 75)
  
  Requirement
  -----------------
@@ -31,12 +32,12 @@ download .apk, try it on your android phone: https://drive.google.com/file/d/185
  
  Note
  -------------
- This is a simplified example project to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
- This project is as simple as possible, only contains a simple CPU cell frustum culling(not even a quadtree) -> minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else, code is very short.
+ This is a simplified example repository to demonstrate DrawMeshInstancedIndirect API on mobile platform.  
+ This repository is as simple as possible, only contains a simple CPU cell frustum culling(not even a quadtree) -> minimum compute GPU frustum culling (no Acceleration Algorithms), then just 1 DrawMeshInstancedIndirect call, nothing else, code is very short.
  
- Lighting and animation is not the main focus of this project, but >50% of the time was spent on writing grass shader's lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
+ Lighting and animation is not the main focus of this project, but ~40% of the time was spent on writing grass shader's lighting & animation, you can have a look at  InstancedIndirectGrass.shader if you are interested.  
  
- This project also contains a RendererFeature(GrassBendingRTPrePass.cs) to render an offscreen RT(R8), which renders top down view grass bending area (by trail renderer following moving objects), it is a very simple method but the result is good enough for this demo.
+ This repository also contains a RendererFeature(GrassBendingRTPrePass.cs) to render an offscreen RT(R8), which renders top down view grass bending area (by trail renderer following moving objects), it is a very simple method but the result is good enough for this demo.
  
 reference
 -------------------
