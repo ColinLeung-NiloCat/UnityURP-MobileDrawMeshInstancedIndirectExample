@@ -23,7 +23,7 @@ download .apk, try it on your android phone: https://drive.google.com/file/d/185
  
  Requirement
  -----------------
- if you want to try the pre-built .apk, your android device must support Opengles3.2 / Vulkan
+ if you want to try the pre-built .apk, your android device must support Opengles3.2 / Vulkan  
  download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_/view
  
  Editor
