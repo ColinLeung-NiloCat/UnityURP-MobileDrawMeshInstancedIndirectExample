@@ -26,6 +26,10 @@ download .apk, try it on your android phone: https://drive.google.com/file/d/185
  if you want to try the pre-built .apk, your android device must support Opengles3.2 / Vulkan  
  download .apk: https://drive.google.com/file/d/185JWZXYPnVyDnA451cEZkS2H2wOYSce_/view
  
+ Where are the important files
+ ----------------
+ https://github.com/ColinLeung-NiloCat/UnityURP-MobileDrawMeshInstancedIndirectExample/tree/master/Assets/URPMobileGrassInstancedIndirectDemo/InstancedIndirectGrass/Core
+ 
  Editor
  ------------
  2019.4.3f1
