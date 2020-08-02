@@ -22,6 +22,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     private int cellCountX = -1;
     private int cellCountZ = -1;
+    private int dispatchCount = -1;
 
     private int instanceCountCache = -1;
     private Mesh cachedGrassMesh;
@@ -61,7 +62,8 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlanes);//Ordering: [0] = Left, [1] = Right, [2] = Down, [3] = Up, [4] = Near, [5] = Far
         cam.farClipPlane = cameraOriginalFarPlane;//revert far plane edit
 
-        //TODO: replace this forloop to a quadtree?
+        //TODO: replace this forloop by a quadtree test?
+        //TODO: convert this forloop to job+burst?
         for (int i = 0; i < cellPosWSsList.Length; i++)
         {
             //create cell bound
@@ -92,7 +94,7 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
         cullingComputeShader.SetFloat("_MaxDrawDistance", drawDistance);
 
         //dispatch per visible cell
-        //TODO: we can batch n dispatchs into 1, per line horizontally
+        dispatchCount = 0;
         for (int i = 0; i < visibleCellIDList.Count; i++)
         {
             int targetCellFlattenID = visibleCellIDList[i];
@@ -102,7 +104,21 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
                 memoryOffset += cellPosWSsList[j].Count;
             }
             cullingComputeShader.SetInt("_StartOffset", memoryOffset); //culling read data started at offseted pos, will start from cell's total offset in memory
-            cullingComputeShader.Dispatch(0, Mathf.CeilToInt(cellPosWSsList[targetCellFlattenID].Count / 64f), 1, 1); //disaptch.X division number must match in shader (e.g. 64)
+            int jobLength = cellPosWSsList[targetCellFlattenID].Count;
+
+            //============================================================================================
+            //batch n dispatchs into 1 dispatch, if memory is continuous in allInstancesPosWSBuffer
+            while ( (i < visibleCellIDList.Count - 1) && //test this first to avoid out of bound access to visibleCellIDList
+                    (visibleCellIDList[i + 1] == visibleCellIDList[i] + 1))
+            {
+                //if memory is continuous, append them together into the same dispatch call
+                jobLength += cellPosWSsList[visibleCellIDList[i + 1]].Count;
+                i++;
+            }
+            //============================================================================================
+
+            cullingComputeShader.Dispatch(0, Mathf.CeilToInt(jobLength / 64f), 1, 1); //disaptch.X division number must match numthreads.x in compute shader (e.g. 64)
+            dispatchCount++;
         }
 
         //====================================================================================
@@ -119,7 +135,11 @@ public class InstancedIndirectGrassRenderer : MonoBehaviour
 
     private void OnGUI()
     {
-        GUI.Label(new Rect(200, 10, 200, 40), $"After CPU cell frustum culling, visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}");
+        GUI.contentColor = Color.black;
+        GUI.Label(new Rect(200, 0, 400, 60), 
+            $"After CPU cell frustum culling,\n" +
+            $"-Visible cell count = {visibleCellIDList.Count}/{cellCountX * cellCountZ}\n" +
+            $"-Real compute dispatch count = {dispatchCount} (saved by batching = {visibleCellIDList.Count - dispatchCount})");
     }
 
     void OnDisable()
