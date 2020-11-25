@@ -5,8 +5,6 @@ download .apk, try it on your android phone: https://drive.google.com/file/d/185
 
  DrawMeshInstancedIndirect ON
  ![screenshot](https://i.imgur.com/oQoFK46.png)
- ![screenshot](https://i.imgur.com/DDPbFhQ.png)
- ![screenshot](https://i.imgur.com/rBvlLeG.png)
  DrawMeshInstancedIndirect ON (grass bending)
  ![screenshot](https://i.imgur.com/QDXbEZw.png)
  ![screenshot](https://i.imgur.com/E7wEEPR.png)
