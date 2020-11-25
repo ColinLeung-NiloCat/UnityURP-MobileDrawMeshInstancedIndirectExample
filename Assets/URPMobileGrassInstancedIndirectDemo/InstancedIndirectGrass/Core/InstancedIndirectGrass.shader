@@ -3,6 +3,7 @@
     Properties
     {
         [MainColor] _BaseColor("BaseColor", Color) = (1,1,1,1)
+        _BaseColorTexture("_BaseColorTexture", 2D) = "white" {}
         _GroundColor("_GroundColor", Color) = (0.5,0.5,0.5)
 
         [Header(Grass Shape)]
@@ -104,6 +105,7 @@
                 float2 _WindCWrap;
 
                 half3 _BaseColor;
+                float4 _BaseColorTexture_ST;
                 half3 _GroundColor;
 
                 half _RandomNormal;
@@ -113,6 +115,7 @@
             CBUFFER_END
 
             sampler2D _GrassBendingRT;
+            sampler2D _BaseColorTexture;
 
             half3 ApplySingleDirectLight(Light light, half3 N, half3 V, half3 albedo, half positionOSY)
             {
@@ -210,7 +213,9 @@
                 half3 N = normalize(half3(0,1,0) + randomAddToN - cameraTransformForwardWS*0.5);
 
                 half3 V = viewWS / ViewWSLength;
-                half3 albedo = lerp(_GroundColor,_BaseColor, IN.positionOS.y);//you can use texture if you wish to
+
+                half3 baseColor = tex2Dlod(_BaseColorTexture, float4(TRANSFORM_TEX(positionWS.xz,_BaseColorTexture),0,0)) * _BaseColor;//sample mip 0 only
+                half3 albedo = lerp(_GroundColor,baseColor, IN.positionOS.y);
 
                 //indirect
                 half3 lightingResult = SampleSH(0) * albedo;
